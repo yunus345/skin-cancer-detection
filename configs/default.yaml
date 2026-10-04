@@ -1,0 +1,13 @@
+project_name: skin-cancer-detection
+seed: 42
+input_size: 224
+batch_size: 32
+epochs: 5
+learning_rate: 1e-4
+train_ratio: 0.8
+val_ratio: 0.1
+test_ratio: 0.1
+manifest_path: data/processed/manifest.csv
+model_name: efficientnet_b0
+num_workers: 2
+pretrained: true

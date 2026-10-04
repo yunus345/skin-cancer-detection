@@ -1,0 +1,14 @@
+# Temel Python paketleri (gerektiğinde güncelleyin)
+torch
+torchvision
+numpy
+pandas
+scikit-learn
+matplotlib
+seaborn
+opencv-python
+scikit-image
+albumentations
+tqdm
+jupyter
+PyYAML

@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.env
+.ipynb_checkpoints
+
+# macOS
+.DS_Store
+
+# Data and models
+/data/
+/models/
+/results/
+/logs/
+
+# VSCode
+.vscode/
+
+# Claude Code
+.claude/
+
