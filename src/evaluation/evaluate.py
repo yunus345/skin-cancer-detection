@@ -23,7 +23,9 @@ from src.training.train import build_model, build_transforms, select_device
 
 
 def load_checkpoint(checkpoint_path: str, device: torch.device):
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    # weights_only=False: kendi urettigimiz, guvendigimiz bir checkpoint - PyTorch 2.6+'nin
+    # varsayilan guvenlik kisitlamasi (numpy skalerleri reddetmesi) burada gereksiz.
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     labels = checkpoint['labels']
     model = build_model(num_classes=len(labels))
     model.load_state_dict(checkpoint['model_state_dict'])
