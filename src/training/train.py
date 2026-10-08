@@ -31,11 +31,27 @@ class AlbumentationsTransform:
         return self.compose(image=np.array(pil_image))['image']
 
 
+def gray_world_color_constancy(image, **kwargs):
+    """Gray World varsayimi: dogal bir sahnenin ortalama rengi griye yakin olmali. Her kanali,
+    kanal ortalamalari esitlenecek sekilde olcekler - cihaz/isik kaynakli renk sapmasini azaltir."""
+    image = image.astype(np.float32)
+    channel_means = image.reshape(-1, image.shape[2]).mean(axis=0)
+    gray_mean = channel_means.mean()
+    scale = gray_mean / (channel_means + 1e-6)
+    corrected = image * scale
+    return np.clip(corrected, 0, 255).astype(np.uint8)
+
+
 def build_transforms(image_size: int, train: bool = False):
+    # Color constancy: rastgele bir augmentation degil, her zaman uygulanan bir normalizasyon
+    # adimi - hem train hem val/test'te aynen calisir, p=1.0.
+    color_constancy = A.Lambda(image=gray_world_color_constancy, p=1.0)
+
     if train:
         # RandomResizedCrop + CoarseDropout (cutout), ColorJitter'dan daha gercekci/agresif
         # augmentation - modelin lezyonun tamamina degil, parcalarina da odaklanmasini zorlar.
         compose = A.Compose([
+            color_constancy,
             A.RandomResizedCrop(size=(image_size, image_size), scale=(0.8, 1.0), ratio=(0.9, 1.1)),
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.5),
@@ -48,6 +64,7 @@ def build_transforms(image_size: int, train: bool = False):
         ])
     else:
         compose = A.Compose([
+            color_constancy,
             A.Resize(image_size, image_size),
             A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
             ToTensorV2(),
