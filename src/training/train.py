@@ -5,30 +5,54 @@ import argparse
 import json
 from pathlib import Path
 
+import albumentations as A
+import numpy as np
 import torch
+from albumentations.pytorch import ToTensorV2
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score, precision_score, recall_score
 from torch import nn
 from torch.utils.data import DataLoader
-from torchvision import transforms
 from torchvision.models import EfficientNet_B0_Weights, efficientnet_b0
 
 from src.data.loader import SkinCancerDataset
 
+IMAGENET_MEAN = [0.485, 0.456, 0.406]
+IMAGENET_STD = [0.229, 0.224, 0.225]
+
+
+class AlbumentationsTransform:
+    """Adapts an albumentations Compose to the torchvision-style `transform(pil_image) -> tensor` call,
+    so SkinCancerDataset (which calls `self.transform(img)` with a PIL image) needs no changes."""
+
+    def __init__(self, compose: A.Compose):
+        self.compose = compose
+
+    def __call__(self, pil_image):
+        return self.compose(image=np.array(pil_image))['image']
+
 
 def build_transforms(image_size: int, train: bool = False):
-    steps = [transforms.Resize((image_size, image_size))]
     if train:
-        steps.extend([
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomVerticalFlip(),
-            transforms.RandomRotation(15),
-            transforms.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.15),
+        # RandomResizedCrop + CoarseDropout (cutout), ColorJitter'dan daha gercekci/agresif
+        # augmentation - modelin lezyonun tamamina degil, parcalarina da odaklanmasini zorlar.
+        compose = A.Compose([
+            A.RandomResizedCrop(size=(image_size, image_size), scale=(0.8, 1.0), ratio=(0.9, 1.1)),
+            A.HorizontalFlip(p=0.5),
+            A.VerticalFlip(p=0.5),
+            A.Rotate(limit=20, p=0.7),
+            A.RandomBrightnessContrast(brightness_limit=0.15, contrast_limit=0.15, p=0.5),
+            A.HueSaturationValue(hue_shift_limit=10, sat_shift_limit=15, val_shift_limit=10, p=0.3),
+            A.CoarseDropout(num_holes_range=(1, 4), hole_height_range=(0.05, 0.15), hole_width_range=(0.05, 0.15), p=0.3),
+            A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+            ToTensorV2(),
         ])
-    steps.extend([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-    return transforms.Compose(steps)
+    else:
+        compose = A.Compose([
+            A.Resize(image_size, image_size),
+            A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+            ToTensorV2(),
+        ])
+    return AlbumentationsTransform(compose)
 
 
 def build_model(num_classes: int):

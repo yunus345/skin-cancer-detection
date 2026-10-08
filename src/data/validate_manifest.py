@@ -27,6 +27,14 @@ def validate_manifest(manifest_path: str, check_images: bool = True) -> bool:
 
     if df['image_path'].duplicated().any():
         errors.append(f'{int(df["image_path"].duplicated().sum())} duplicate image paths found')
+    if 'image_id' in df.columns:
+        nonempty_ids = df['image_id'].astype(str).str.strip()
+        nonempty_ids = nonempty_ids[nonempty_ids != '']
+        if nonempty_ids.duplicated().any():
+            errors.append(
+                f'{int(nonempty_ids.duplicated().sum())} duplicate image_id values found '
+                '(same image likely present under multiple paths)'
+            )
     if df['label'].astype(str).str.strip().eq('').any():
         errors.append(f'{int(df["label"].astype(str).str.strip().eq("").sum())} rows have empty labels')
     if not set(df['split']).issubset({'train', 'val', 'test'}):

@@ -144,6 +144,8 @@ def build_manifest(data_root: str, out: str):
         writer.writerow(['image_path', 'label', 'split', 'source', 'lesion_id', 'image_id', 'dx'])
 
         labeled_count = 0
+        duplicate_count = 0
+        seen_image_ids: set = set()
         for image_path in sorted(images):
             image_key = normalize_image_key(image_path.name)
             match = metadata_store.get(image_key, {})
@@ -152,6 +154,15 @@ def build_manifest(data_root: str, out: str):
             lesion_id = str(match.get('lesion_id', '')).strip()
             image_id = str(match.get('image_id', image_path.stem)).strip()
             source = 'ham10000' if 'ham10000' in str(image_path).lower() else 'unknown'
+
+            # Ayni gorsel (ayni image_id) birden fazla klasorde kopya halinde
+            # bulunabiliyor (orn. ayri parcali klasorler + birlesik klasor).
+            # Sadece ilk (alfabetik olarak once gelen) kopyayi tutuyoruz.
+            if image_id and image_id in seen_image_ids:
+                duplicate_count += 1
+                continue
+            if image_id:
+                seen_image_ids.add(image_id)
 
             writer.writerow([
                 resolve_relative_path(image_path, repo_root),
@@ -166,6 +177,8 @@ def build_manifest(data_root: str, out: str):
                 labeled_count += 1
 
     print(f'Wrote manifest to {out_path} ({len(images)} rows, {labeled_count} labeled)')
+    if duplicate_count:
+        print(f'Skipped {duplicate_count} duplicate image_id entries (kept first occurrence of each).')
 
 
 def main():
