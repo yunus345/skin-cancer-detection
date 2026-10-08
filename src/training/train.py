@@ -73,6 +73,22 @@ def count_trainable_params(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
+class FocalLoss(nn.Module):
+    """Class-weighted focal loss: modelin zaten emin oldugu (kolay) orneklerin
+    loss'a katkisini (1-p)^gamma ile azaltir, kararsiz/zor orneklere odaklanir."""
+
+    def __init__(self, weight: torch.Tensor | None = None, gamma: float = 2.0):
+        super().__init__()
+        self.weight = weight
+        self.gamma = gamma
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        ce_loss = nn.functional.cross_entropy(logits, targets, weight=self.weight, reduction='none')
+        pt = torch.exp(-ce_loss)  # dogru sinifa verilen olasilik
+        focal_loss = ((1 - pt) ** self.gamma) * ce_loss
+        return focal_loss.mean()
+
+
 def select_device(preferred: str = 'auto') -> torch.device:
     if preferred != 'auto':
         return torch.device(preferred)
@@ -175,6 +191,8 @@ def train_model(
     device_arg: str,
     scheduler_name: str = 'none',
     patience: int = 3,
+    loss_fn: str = 'ce',
+    focal_gamma: float = 2.0,
 ):
     torch.manual_seed(seed)
     device = select_device(device_arg)
@@ -192,7 +210,10 @@ def train_model(
         for row in train_dataset.manifest
     ]), minlength=len(train_dataset.labels)).float()
     class_weights = label_counts.sum() / (len(label_counts) * label_counts.clamp_min(1))
-    criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
+    if loss_fn == 'focal':
+        criterion = FocalLoss(weight=class_weights.to(device), gamma=focal_gamma)
+    else:
+        criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
@@ -274,6 +295,8 @@ def main():
     parser.add_argument('--device', choices=['auto', 'cpu', 'cuda', 'mps'], default='auto', help='Compute device; auto picks MPS > CUDA > CPU')
     parser.add_argument('--scheduler', choices=['none', 'cosine'], default='none', help='LR scheduler per phase (none = sabit LR)')
     parser.add_argument('--patience', type=int, default=3, help='Early stopping patience (val_f1 iyilesmeyen epoch sayisi)')
+    parser.add_argument('--loss-fn', choices=['ce', 'focal'], default='ce', help='Loss fonksiyonu: ce (class-weighted CrossEntropy) veya focal')
+    parser.add_argument('--focal-gamma', type=float, default=2.0, help='Focal loss gamma parametresi (sadece --loss-fn focal ile)')
     args = parser.parse_args()
 
     finetune_lr = args.finetune_lr if args.finetune_lr is not None else args.learning_rate / 10
@@ -291,6 +314,8 @@ def main():
         device_arg=args.device,
         scheduler_name=args.scheduler,
         patience=args.patience,
+        loss_fn=args.loss_fn,
+        focal_gamma=args.focal_gamma,
     )
 
 
