@@ -14,7 +14,6 @@ from sklearn.metrics import (
     f1_score,
     precision_recall_fscore_support,
     precision_score,
-    recall_score,
 )
 from torch.utils.data import DataLoader
 
@@ -58,26 +57,68 @@ def apply_threshold_override(probs, class_idx, threshold):
 
 
 def summarize(targets, predictions, labels) -> dict:
+    """Metrik hiyerarsisi (sunumla kararlastirdigimiz standart):
+    1. Headline: macro_f1 - model secimi / kendi aramizdaki karsilastirma icin.
+    2. Dis karsilastirma: balanced_accuracy (=macro recall, ISIC leaderboard ile kiyas icin)
+       ve macro_precision (sadece ilgili makaleyle kiyas icin, "MCA" DEMIYORUZ - yaniltici).
+    3. Klinik: mel_recall + mel_precision - kanseri kacirmama onceligi.
+    """
     label_ids = list(range(len(labels)))
     overall = {
         'accuracy': accuracy_score(targets, predictions),
-        'balanced_accuracy': balanced_accuracy_score(targets, predictions),
-        'precision': precision_score(targets, predictions, average='macro', zero_division=0),
-        'recall': recall_score(targets, predictions, average='macro', zero_division=0),
-        'f1': f1_score(targets, predictions, average='macro', zero_division=0),
+        'macro_f1': f1_score(targets, predictions, average='macro', zero_division=0),
+        'balanced_accuracy': balanced_accuracy_score(targets, predictions),  # = macro recall
+        'macro_precision': precision_score(targets, predictions, average='macro', zero_division=0),
     }
     per_class_precision, per_class_recall, per_class_f1, per_class_support = precision_recall_fscore_support(
         targets, predictions, labels=label_ids, zero_division=0,
     )
+    per_class = {
+        label: {'precision': float(p), 'recall': float(r), 'f1': float(f), 'support': int(s)}
+        for label, p, r, f, s in zip(labels, per_class_precision, per_class_recall, per_class_f1, per_class_support)
+    }
+    clinical = {}
+    if 'mel' in per_class:
+        clinical = {'mel_recall': per_class['mel']['recall'], 'mel_precision': per_class['mel']['precision']}
+
     matrix = confusion_matrix(targets, predictions, labels=label_ids)
     return {
         'overall': overall,
-        'per_class': {
-            label: {'precision': float(p), 'recall': float(r), 'f1': float(f), 'support': int(s)}
-            for label, p, r, f, s in zip(labels, per_class_precision, per_class_recall, per_class_f1, per_class_support)
-        },
+        'clinical': clinical,
+        'per_class': per_class,
         'confusion_matrix': {'labels': labels, 'matrix': matrix.tolist()},
     }
+
+
+def bootstrap_ci(targets, predictions, labels, n_iterations: int = 1000, seed: int = 42) -> dict:
+    """Test setini yerine-koyarak (with replacement) n_iterations kez yeniden orneklep her seferinde
+    headline metrikleri hesaplar; %95 guven araligini (2.5-97.5 persentil) dondurur. Model tekrar
+    calistirilmiyor - sadece elimizdeki (targets, predictions) ciftleri uzerinde, hizli bir islem."""
+    rng = np.random.default_rng(seed)
+    n = len(targets)
+    mel_idx = labels.index('mel') if 'mel' in labels else None
+
+    samples = {'macro_f1': [], 'balanced_accuracy': [], 'macro_precision': [], 'mel_recall': [], 'mel_precision': []}
+    for _ in range(n_iterations):
+        idx = rng.integers(0, n, size=n)
+        t, p = targets[idx], predictions[idx]
+        samples['macro_f1'].append(f1_score(t, p, average='macro', zero_division=0))
+        samples['balanced_accuracy'].append(balanced_accuracy_score(t, p))
+        samples['macro_precision'].append(precision_score(t, p, average='macro', zero_division=0))
+        if mel_idx is not None:
+            pc_precision, pc_recall, _, _ = precision_recall_fscore_support(
+                t, p, labels=[mel_idx], zero_division=0,
+            )
+            samples['mel_precision'].append(float(pc_precision[0]))
+            samples['mel_recall'].append(float(pc_recall[0]))
+
+    ci = {}
+    for key, values in samples.items():
+        if not values:
+            continue
+        arr = np.array(values)
+        ci[key] = {'ci_95_low': float(np.percentile(arr, 2.5)), 'ci_95_high': float(np.percentile(arr, 97.5))}
+    return ci
 
 
 def format_confusion_matrix(matrix, labels) -> str:
@@ -91,10 +132,25 @@ def format_confusion_matrix(matrix, labels) -> str:
 
 def print_report(results: dict) -> None:
     overall = results['overall']
+    ci = results.get('bootstrap_ci', {})
+
+    def fmt(key: str, value: float) -> str:
+        if key in ci:
+            return f'{value:.4f} (%95 GA: {ci[key]["ci_95_low"]:.4f}-{ci[key]["ci_95_high"]:.4f})'
+        return f'{value:.4f}'
+
+    print(f'\n[1. Headline]      macro_f1: {fmt("macro_f1", overall["macro_f1"])}')
     print(
-        f'\nTest accuracy: {overall["accuracy"]:.4f}  balanced_accuracy: {overall["balanced_accuracy"]:.4f}  '
-        f'macro_f1: {overall["f1"]:.4f}\n'
+        f'[2. Dış karşılaştırma] balanced_accuracy (=macro recall, ISIC): {fmt("balanced_accuracy", overall["balanced_accuracy"])}\n'
+        f'                       macro_precision (sadece ilgili makaleyle kıyas): {fmt("macro_precision", overall["macro_precision"])}'
     )
+    if results.get('clinical'):
+        clinical = results['clinical']
+        print(
+            f'[3. Klinik]         mel_recall: {fmt("mel_recall", clinical["mel_recall"])}\n'
+            f'                       mel_precision: {fmt("mel_precision", clinical["mel_precision"])}'
+        )
+    print(f'\naccuracy (bilgi amaçlı, dengesiz veride yanıltıcı olabilir): {overall["accuracy"]:.4f}\n')
     print(f'{"class":>8s} {"precision":>10s} {"recall":>10s} {"f1":>10s} {"support":>8s}')
     for label, m in results['per_class'].items():
         print(f'{label:>8s} {m["precision"]:10.4f} {m["recall"]:10.4f} {m["f1"]:10.4f} {m["support"]:8d}')
@@ -114,6 +170,7 @@ def main():
         '--mel-threshold', type=float, default=None,
         help='Argmax yerine: "mel" olasılığı bu eşiği geçerse, başka sınıf daha olası olsa bile mel tahmin et',
     )
+    parser.add_argument('--bootstrap-iterations', type=int, default=1000, help='Bootstrap %95 güven aralığı için yeniden örnekleme sayısı (0 = kapalı)')
     args = parser.parse_args()
 
     device = select_device(args.device)
@@ -138,6 +195,8 @@ def main():
     results = summarize(targets, predictions, labels)
     if args.mel_threshold is not None:
         results['mel_threshold'] = args.mel_threshold
+    if args.bootstrap_iterations > 0:
+        results['bootstrap_ci'] = bootstrap_ci(targets, predictions, labels, n_iterations=args.bootstrap_iterations)
     print_report(results)
 
     output_path = Path(args.output)
