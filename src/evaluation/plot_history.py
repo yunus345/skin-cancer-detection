@@ -76,7 +76,7 @@ def main():
         ax_lr.plot(epochs, learning_rate, color=COLOR_TRAIN, linewidth=2, marker='o', markersize=5, label='learning_rate')
         ax_lr.set_ylabel('Learning rate', color=COLOR_TEXT)
         ax_lr.set_xlabel('Epoch', color=COLOR_TEXT)
-        ax_lr.set_title('Cosine annealing scheduler', color=COLOR_TEXT)
+        ax_lr.set_title('Learning rate', color=COLOR_TEXT)
         ax_lr.set_yscale('log')
         ax_lr.legend(frameon=False, labelcolor=COLOR_TEXT)
         style_axis(ax_lr)
