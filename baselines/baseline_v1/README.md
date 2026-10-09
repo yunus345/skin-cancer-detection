@@ -36,8 +36,9 @@ Referans: aynı ISIC 2018 verisiyle çalışan bir makalede balanced_accuracy
 en riskli hata türü. 664 nv örneğinden 77'si "mel" tahmin edilmiş (daha az
 riskli ama mel_precision'ı düşürüyor).
 
-## Ağırlıklar (best_model.pt / baseline_model.pt)
+## Ağırlıklar (best_model.pt)
 
-Git'e dahil edilmedi (32MB, gitignore'daki /models/ kuralı korunuyor).
-Google Drive'da saklı: `skin-cancer-detection-runs/latest/` ve
-tarih-saat damgalı arşiv klasöründe.
+Bu klasörde doğrudan git'e dahil edildi (16MB) — Drive'a veya yerel
+diske bağımlı kalmadan kalıcı, garanti bir kopya olsun diye. Modeli
+yeniden yüklemek için: `src.evaluation.evaluate --checkpoint
+baselines/baseline_v1/best_model.pt`.
