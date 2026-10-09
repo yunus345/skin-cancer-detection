@@ -23,8 +23,18 @@ güvenli bir referans noktası olarak dururken istediğin zaman, istediğin
 hızda denemeye başlayabiliriz.
 
 ## Sıradaki adım (tek, somut)
-Henüz belirlenmedi — döndüğünde Claude'a "nereden devam edelim" diye sor,
-birlikte tek ve küçük bir adıma karar verelim.
+Karar verildi: EfficientNet-B0'ın yanına **ConvNeXt-Tiny** mimarisini
+ekleyeceğiz (torchvision'da pretrained hazır, ekstra bağımlılık gerekmiyor).
+Seçim sebebi: ResNet50'den daha güncel/güçlü, EfficientNet'ten yeterince
+farklı bir tasarım (ileride ensemble çeşitliliği için önemli).
+
+Çalışma branch'i hazır: `mimari-convnext-tiny` (main'den ayrıldı, henüz
+kod değişikliği yok). Döndüğünde: `git checkout mimari-convnext-tiny` ile
+başla, `build_model`'e mimari parametresi eklemekle devam ederiz.
+
+Henüz başlanmayan diğer fikirler (sırayla): checkpoint ensemble (aynı
+mimari, farklı seed), augmentation/görüntü boyutu büyütme, mel-threshold
+ayarı.
 
 ## Unutulmaması gereken kurallar
 - `deri-kanseri-cnn-uygulamas.ipynb` dosyasına **asla dokunma** (senin ayrı,
