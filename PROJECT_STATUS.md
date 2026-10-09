@@ -17,21 +17,26 @@ amaçlı bir proje — bkz. CLAUDE.md.
 
 ## Şu an neredeyiz?
 Proje güvencede, **acil yapılacak bir şey yok**. "Köklü değişiklikler"
-yolculuğuna başladık: ilk adım olan ConvNeXt-Tiny mimari desteği kodda
-hazır (ayrı bir branch'te, `main`/`baseline-v1` dokunulmamış). Sırada bu
-mimariyle gerçek bir eğitim koşusu var — henüz başlatılmadı.
+yolculuğuna başladık: ConvNeXt-Tiny mimari desteği hem kodda hem Colab
+notebook'unda hazır (ayrı bir branch'te, `main`/`baseline-v1`
+dokunulmamış). Tek eksik: Colab'da gerçek koşuyu **sen başlatman**
+gerekiyor — Claude Colab'a bağlanamıyor, bu adımı otomatik yapamaz.
 
 ## Sıradaki adım (tek, somut)
-ConvNeXt-Tiny kod desteği **tamamlandı ve yerel duman testinde doğrulandı**
-(branch: `mimari-convnext-tiny`, commit `c86178a`). `build_model` artık
-`--architecture efficientnet_b0|convnext_tiny` ile seçim yapabiliyor,
-checkpoint'ler hangi mimariyle eğitildiklerini kaydediyor.
+Her şey hazır, sadece Colab'ı açıp çalıştırman kaldı:
 
-Şimdiki adım: bu branch'te **gerçek bir tam eğitim koşusu** (Colab'da,
-`--architecture convnext_tiny` ekleyerek, diğer bayraklar aynı) ve
-sonucu `baseline-v1` ile kıyaslamak. Döndüğünde: `git checkout
-mimari-convnext-tiny`, sonra Colab notebook'unun eğitim hücresine
-`--architecture convnext_tiny` ekleyip (henüz eklenmedi) çalıştır.
+1. [colab.research.google.com](https://colab.research.google.com) → Dosya
+   → Not defterini aç → GitHub sekmesi → repo: `yunus345/skin-cancer-detection`
+   → **branch: `mimari-convnext-tiny`** (önemli, main değil) → dosya:
+   `notebooks/00_project_setup.ipynb`
+2. Çalışma zamanı türü → T4 GPU
+3. Hücreleri baştan sırayla çalıştır (kod zaten `--architecture convnext_tiny`
+   ve doğru branch'i klonlayacak şekilde ayarlı, ekstra bir şey eklemene
+   gerek yok)
+4. Bitince sonucu `baseline-v1`deki sayılarla (balanced_accuracy=0.762,
+   macro_f1=0.698) kıyaslarız
+
+(branch: `mimari-convnext-tiny`, son commit `e9de811`)
 
 Henüz başlanmayan diğer fikirler (sırayla): Swin V2 ve EfficientNetV2-S
 mimarileri, checkpoint ensemble (üç mimariyi birleştirmek), augmentation/
