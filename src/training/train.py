@@ -12,7 +12,7 @@ from albumentations.pytorch import ToTensorV2
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score, precision_score, recall_score
 from torch import nn
 from torch.utils.data import DataLoader
-from torchvision.models import EfficientNet_B0_Weights, efficientnet_b0
+from torchvision.models import ConvNeXt_Tiny_Weights, EfficientNet_B0_Weights, convnext_tiny, efficientnet_b0
 
 from src.data.loader import SkinCancerDataset
 
@@ -72,10 +72,19 @@ def build_transforms(image_size: int, train: bool = False):
     return AlbumentationsTransform(compose)
 
 
-def build_model(num_classes: int):
-    model = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
-    in_features = model.classifier[1].in_features
-    model.classifier[1] = nn.Linear(in_features, num_classes)
+def build_model(num_classes: int, architecture: str = 'efficientnet_b0'):
+    # Her iki mimari de son katmanini ayni isimle (`classifier`) tutuyor - sadece Sequential
+    # icindeki Linear'in indeksi farkli (EfficientNet: [1], ConvNeXt: LayerNorm+Flatten sonrasi [2]).
+    if architecture == 'efficientnet_b0':
+        model = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
+        in_features = model.classifier[1].in_features
+        model.classifier[1] = nn.Linear(in_features, num_classes)
+    elif architecture == 'convnext_tiny':
+        model = convnext_tiny(weights=ConvNeXt_Tiny_Weights.DEFAULT)
+        in_features = model.classifier[2].in_features
+        model.classifier[2] = nn.Linear(in_features, num_classes)
+    else:
+        raise ValueError(f'Bilinmeyen mimari: {architecture}')
     return model
 
 
@@ -184,6 +193,7 @@ def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader,
             torch.save({
                 'model_state_dict': model.state_dict(),
                 'labels': state['labels'],
+                'architecture': state['architecture'],
                 'metrics': metrics,
             }, out_dir / 'best_model.pt')
             state['epochs_without_improvement'] = 0
@@ -210,6 +220,7 @@ def train_model(
     patience: int = 3,
     loss_fn: str = 'ce',
     focal_gamma: float = 2.0,
+    architecture: str = 'efficientnet_b0',
 ):
     torch.manual_seed(seed)
     device = select_device(device_arg)
@@ -221,7 +232,7 @@ def train_model(
     if len(train_dataset) == 0 or len(val_dataset) == 0:
         raise ValueError('Manifest must contain non-empty train/val splits. Run src.data.split_manifest first.')
 
-    model = build_model(num_classes=len(train_dataset.labels)).to(device)
+    model = build_model(num_classes=len(train_dataset.labels), architecture=architecture).to(device)
     label_counts = torch.bincount(torch.tensor([
         train_dataset.label_to_idx[str(row['label']).strip()]
         for row in train_dataset.manifest
@@ -245,6 +256,7 @@ def train_model(
         'global_epoch': 0,
         'patience': patience,
         'labels': train_dataset.labels,
+        'architecture': architecture,
         'history': [],
     }
 
@@ -281,6 +293,7 @@ def train_model(
     torch.save({
         'model_state_dict': model.state_dict(),
         'labels': train_dataset.labels,
+        'architecture': architecture,
         'metrics': final_metrics,
     }, checkpoint_path)
 
@@ -314,6 +327,7 @@ def main():
     parser.add_argument('--patience', type=int, default=3, help='Early stopping patience (val_f1 iyilesmeyen epoch sayisi)')
     parser.add_argument('--loss-fn', choices=['ce', 'focal'], default='ce', help='Loss fonksiyonu: ce (class-weighted CrossEntropy) veya focal')
     parser.add_argument('--focal-gamma', type=float, default=2.0, help='Focal loss gamma parametresi (sadece --loss-fn focal ile)')
+    parser.add_argument('--architecture', choices=['efficientnet_b0', 'convnext_tiny'], default='efficientnet_b0', help='Backbone mimarisi')
     args = parser.parse_args()
 
     finetune_lr = args.finetune_lr if args.finetune_lr is not None else args.learning_rate / 10
@@ -333,6 +347,7 @@ def main():
         patience=args.patience,
         loss_fn=args.loss_fn,
         focal_gamma=args.focal_gamma,
+        architecture=args.architecture,
     )
 
 

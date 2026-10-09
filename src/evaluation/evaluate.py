@@ -26,7 +26,10 @@ def load_checkpoint(checkpoint_path: str, device: torch.device):
     # varsayilan guvenlik kisitlamasi (numpy skalerleri reddetmesi) burada gereksiz.
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     labels = checkpoint['labels']
-    model = build_model(num_classes=len(labels))
+    # Eski checkpoint'lerde (baseline-v1 gibi) 'architecture' alani yok - o zaman tek
+    # mimarimiz EfficientNet-B0'di, varsayilan olarak ona dusuyoruz (geriye uyumluluk).
+    architecture = checkpoint.get('architecture', 'efficientnet_b0')
+    model = build_model(num_classes=len(labels), architecture=architecture)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to(device)
     return model, labels
