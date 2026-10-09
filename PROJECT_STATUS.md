@@ -16,25 +16,26 @@ amaçlı bir proje — bkz. CLAUDE.md.
 - Detaylı rapor: `baselines/baseline_v1/README.md`
 
 ## Şu an neredeyiz?
-Proje güvencede, **acil yapılacak bir şey yok**. Sıradaki büyük adım olarak
-"köklü değişiklikler" konuşuldu (farklı model mimarisi, checkpoint ensemble,
-daha büyük görüntü boyutu) ama henüz hiçbirine başlanmadı — `baseline-v1`
-güvenli bir referans noktası olarak dururken istediğin zaman, istediğin
-hızda denemeye başlayabiliriz.
+Proje güvencede, **acil yapılacak bir şey yok**. "Köklü değişiklikler"
+yolculuğuna başladık: ilk adım olan ConvNeXt-Tiny mimari desteği kodda
+hazır (ayrı bir branch'te, `main`/`baseline-v1` dokunulmamış). Sırada bu
+mimariyle gerçek bir eğitim koşusu var — henüz başlatılmadı.
 
 ## Sıradaki adım (tek, somut)
-Karar verildi: EfficientNet-B0'ın yanına **ConvNeXt-Tiny** mimarisini
-ekleyeceğiz (torchvision'da pretrained hazır, ekstra bağımlılık gerekmiyor).
-Seçim sebebi: ResNet50'den daha güncel/güçlü, EfficientNet'ten yeterince
-farklı bir tasarım (ileride ensemble çeşitliliği için önemli).
+ConvNeXt-Tiny kod desteği **tamamlandı ve yerel duman testinde doğrulandı**
+(branch: `mimari-convnext-tiny`, commit `c86178a`). `build_model` artık
+`--architecture efficientnet_b0|convnext_tiny` ile seçim yapabiliyor,
+checkpoint'ler hangi mimariyle eğitildiklerini kaydediyor.
 
-Çalışma branch'i hazır: `mimari-convnext-tiny` (main'den ayrıldı, henüz
-kod değişikliği yok). Döndüğünde: `git checkout mimari-convnext-tiny` ile
-başla, `build_model`'e mimari parametresi eklemekle devam ederiz.
+Şimdiki adım: bu branch'te **gerçek bir tam eğitim koşusu** (Colab'da,
+`--architecture convnext_tiny` ekleyerek, diğer bayraklar aynı) ve
+sonucu `baseline-v1` ile kıyaslamak. Döndüğünde: `git checkout
+mimari-convnext-tiny`, sonra Colab notebook'unun eğitim hücresine
+`--architecture convnext_tiny` ekleyip (henüz eklenmedi) çalıştır.
 
-Henüz başlanmayan diğer fikirler (sırayla): checkpoint ensemble (aynı
-mimari, farklı seed), augmentation/görüntü boyutu büyütme, mel-threshold
-ayarı.
+Henüz başlanmayan diğer fikirler (sırayla): Swin V2 ve EfficientNetV2-S
+mimarileri, checkpoint ensemble (üç mimariyi birleştirmek), augmentation/
+görüntü boyutu büyütme, mel-threshold ayarı.
 
 ## Unutulmaması gereken kurallar
 - `deri-kanseri-cnn-uygulamas.ipynb` dosyasına **asla dokunma** (senin ayrı,
