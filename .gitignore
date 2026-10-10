@@ -13,6 +13,10 @@ __pycache__/
 /results/
 /logs/
 
+# 100MB+ checkpoint'ler GitHub'a sigmiyor (baseline-v1'in 16MB'lik agirligi
+# gibi degil) - Drive + yerel diskte duruyor, git'e girmesin
+baselines/convnext_tiny_v1/best_model.pt
+
 # VSCode
 .vscode/
 
