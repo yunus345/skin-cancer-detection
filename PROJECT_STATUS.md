@@ -49,6 +49,14 @@ yazılı, henüz gerçek checkpoint'lerle test edilmedi), mel-threshold ayarı,
 TTA (test-time augmentation), kalibrasyon, metadata füzyonu (yaş/cinsiyet/
 lezyon konumu — HAM10000'de var ama kullanılmıyor), dış veri (ISIC 2019/2020).
 
+**Ensemble'dan sonraki iyileştirme sırası (netleşti, 2026-10-10):** Önce 3
+mimariyi de düz ortalama ile birleştir → sonra **entegrasyonun kendisini**
+ince ayarla (ağırlıklı ortalama, sınıf-bazlı ağırlık, kalibrasyon — hiçbiri
+yeniden eğitim istemiyor, ucuz/hızlı) → **ancak hâlâ yetersizse ve zayıf
+halka netse**, en pahalı/son çare olarak tek bir mimariyi (örn. daha fazla
+epoch'la) yeniden eğitmeyi düşün. Entegrasyon ayarı, tek model yeniden
+eğitiminden önce gelmeli (daha ucuz, daha hızlı denenebilir).
+
 ## Drive otomasyonu (2026-10-10 kuruldu, ÇALIŞIYOR doğrulandı)
 Google Drive masaüstü uygulaması kurulu ve senkronize. Colab'ın Drive'a
 kaydettiği sonuçlar (`skin-cancer-detection-runs/latest/`) bu Mac'e otomatik
@@ -60,9 +68,11 @@ Not: komut satırından (`ls`/Python) ilk erişimde "Operation timed out"
 hatası alınabilir — Finder'ı açıp Google Drive'a bir kez tıklamak
 (File Provider'ı "uyandırmak") bunu çözüyor.
 
-(Eski/geçersiz Drive klasörleri var: `20261004_192356` dedup-öncesi geçersiz
-bir koşu, `20261010_164549` yarım kalmış bir deneme. Yoksay, sadece `latest`
-ve ona karşılık gelen en yeni tarih damgalı klasör güncel.)
+Basitleştirildi (2026-10-10): artık sadece tek bir `latest/` klasörü var,
+tarih-damgalı arşiv kopyası kaldırıldı (kalıcı arşiv zaten git'teki
+`baselines/`'ta). Eski karışık klasörler (`20261004_192356`,
+`20261010_164549`, `20261010_185539`) silindi, veri kaybı yok (hepsi
+önce git/yerel disk ile MD5 doğrulaması yapılarak silindi).
 
 ## Unutulmaması gereken kurallar
 - `deri-kanseri-cnn-uygulamas.ipynb` dosyasına **asla dokunma** (senin ayrı,
