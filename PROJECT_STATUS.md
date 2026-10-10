@@ -38,6 +38,26 @@ Her şey hazır, sadece Colab'ı açıp çalıştırman kaldı:
 
 (branch: `mimari-convnext-tiny`, son commit `e9de811`)
 
+## Drive otomasyonu (yeni, 2026-10-10 kuruldu)
+Google Drive masaüstü uygulaması kuruldu ve senkronize ediliyor. Artık
+Colab'ın Drive'a kaydettiği sonuçlar (`skin-cancer-detection-runs/latest/`)
+bu Mac'e otomatik iniyor — Claude zip indirip manuel kopyalamadan
+doğrudan okuyabiliyor. Yol: `~/Library/CloudStorage/GoogleDrive-
+emreozkan877@gmail.com/Drive'ım/skin-cancer-detection-runs/`.
+
+Not: komut satırından (`ls`/Python) ilk erişimde "Operation timed out"
+hatası alınabilir — Finder'ı açıp Google Drive'a bir kez tıklamak
+(File Provider'ı "uyandırmak") bunu çözüyor.
+
+Tek bilinmeyen: Colab'ın Drive *mount* adımı `baseline-v1` koşusunda
+hata vermişti (`ValueError: mount failed`) — bu sefer çalışır mı
+belirsiz. Çalışmazsa yedek plan hâlâ geçerli: Colab'da
+`files.download()` ile zip indirip `~/Downloads/`'a düşürmek.
+
+(Eski bir Drive klasörü - `skin-cancer-detection-runs/20261004_192356`
+- dedup düzeltmesinden ÖNCEKİ, geçersiz bir koşuya ait; test seti 1972
+satır - doğrusu 986 olmalı. Yoksay, silinmedi ama kullanılmıyor.)
+
 Henüz başlanmayan diğer fikirler (sırayla): Swin V2 ve EfficientNetV2-S
 mimarileri, checkpoint ensemble (üç mimariyi birleştirmek), augmentation/
 görüntü boyutu büyütme, mel-threshold ayarı.
