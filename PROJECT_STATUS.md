@@ -4,63 +4,65 @@
 
 ## Bu ne projesi?
 HAM10000 veri setiyle cilt lezyonu sınıflandırma (7 sınıf: akiec, bcc, bkl,
-df, mel, nv, vasc). PyTorch + EfficientNet-B0, transfer learning. Öğrenme
-amaçlı bir proje — bkz. CLAUDE.md.
+df, mel, nv, vasc). PyTorch, transfer learning. Öğrenme amaçlı bir proje —
+bkz. CLAUDE.md.
 
-## Şu anki en iyi, güvenceli sonuç: `baseline-v1`
-- balanced_accuracy: **0.762** (%95 GA 0.716–0.804)
-- macro_f1: 0.698, mel_recall: 0.626
-- Kod + eğitilmiş ağırlıklar + metrikler git'te kalıcı olarak duruyor,
-  hiçbir dış depolamaya (Drive, Downloads) bağımlı değil.
-- Bu sonuca her zaman dönebilirsin: `git checkout baseline-v1`
-- Detaylı rapor: `baselines/baseline_v1/README.md`
+## Şu anki en iyi, güvenceli sonuç: `convnext_tiny_v1`
+- balanced_accuracy: **0.798** (%95 GA 0.746–0.846)
+- macro_f1: 0.774, mel_recall: 0.766
+- Kod `main`'de (merge edildi), küçük sonuç dosyaları (metrik/grafik) git'te
+  kalıcı. Ağırlık dosyası (106MB) GitHub'ın 100MB limitini aştığı için git'e
+  giremedi — Drive + yerel diskte duruyor (bkz. README).
+- Detaylı rapor: `baselines/convnext_tiny_v1/README.md`
+
+**Önceki referans `baseline-v1`** (EfficientNet-B0, balanced_accuracy=0.762,
+tamamen git'te, ağırlık dahil) hâlâ duruyor — `git checkout baseline-v1` ile
+erişilebilir, kıyaslama/ensemble için saklanıyor.
 
 ## Şu an neredeyiz?
-Proje güvencede, **acil yapılacak bir şey yok**. "Köklü değişiklikler"
-yolculuğuna başladık: ConvNeXt-Tiny mimari desteği hem kodda hem Colab
-notebook'unda hazır (ayrı bir branch'te, `main`/`baseline-v1`
-dokunulmamış). Tek eksik: Colab'da gerçek koşuyu **sen başlatman**
-gerekiyor — Claude Colab'a bağlanamıyor, bu adımı otomatik yapamaz.
+Mimari değişikliğinin tek başına büyük fark yarattığı doğrulandı: sadece
+EfficientNet-B0 → ConvNeXt-Tiny değişikliğiyle (her şey eşit kalarak)
+macro_f1 0.698→0.774, mel_recall 0.626→0.766 (gerçek melanomayı "iyi huylu"
+sanma hatası 22 vakadan 7'ye düştü). Proje güvencede, acil yapılacak bir
+şey yok.
 
 ## Sıradaki adım (tek, somut)
-Her şey hazır, sadece Colab'ı açıp çalıştırman kaldı:
+Sırada: **Swin V2** ve/veya **EfficientNetV2-S** mimarilerini aynı şekilde
+eğitip `convnext_tiny_v1` ile kıyaslamak — amaç tek kazanan seçmek değil,
+makul çıkan hepsini **ensemble**'da birleştirmek (biri belirgin kötü
+çıkarsa o dışarıda bırakılır).
 
-1. [colab.research.google.com](https://colab.research.google.com) → Dosya
-   → Not defterini aç → GitHub sekmesi → repo: `yunus345/skin-cancer-detection`
-   → **branch: `mimari-convnext-tiny`** (önemli, main değil) → dosya:
-   `notebooks/00_project_setup.ipynb`
-2. Çalışma zamanı türü → T4 GPU
-3. Hücreleri baştan sırayla çalıştır (kod zaten `--architecture convnext_tiny`
-   ve doğru branch'i klonlayacak şekilde ayarlı, ekstra bir şey eklemene
-   gerek yok)
-4. Bitince sonucu `baseline-v1`deki sayılarla (balanced_accuracy=0.762,
-   macro_f1=0.698) kıyaslarız
+Bu sıradaki koşularda, artık "saf mimari etkisi" referansımız (bu ConvNeXt
+sonucu) elimizde olduğu için, ek olarak paketleyebiliriz:
+- Görüntü boyutunu artırmak (224px → 320-384px, mimariye göre)
+- Hız optimizasyonları: mixed precision (AMP), DataLoader `num_workers`,
+  daha büyük batch size — sonucu değiştirmiyor, sadece Colab süresini kısaltır
+  (ConvNeXt koşusu ~2 saat sürdü, T4'te daha büyük modellerle daha da uzayabilir)
 
-(branch: `mimari-convnext-tiny`, son commit `e9de811`)
+Henüz kod tarafında hazır değil — bir sonraki oturumda `build_model`'e
+Swin V2 / EfficientNetV2-S eklemekle başlanır (ConvNeXt eklerken izlenen
+yöntemle aynı: her mimarinin "classifier" katman ismini kontrol et, aynı
+`set_backbone_trainable` mantığı çoğunlukla değişmeden çalışıyor).
 
-## Drive otomasyonu (yeni, 2026-10-10 kuruldu)
-Google Drive masaüstü uygulaması kuruldu ve senkronize ediliyor. Artık
-Colab'ın Drive'a kaydettiği sonuçlar (`skin-cancer-detection-runs/latest/`)
-bu Mac'e otomatik iniyor — Claude zip indirip manuel kopyalamadan
-doğrudan okuyabiliyor. Yol: `~/Library/CloudStorage/GoogleDrive-
+Henüz başlanmayan diğer fikirler: checkpoint ensemble (`ensemble.py` zaten
+yazılı, henüz gerçek checkpoint'lerle test edilmedi), mel-threshold ayarı,
+TTA (test-time augmentation), kalibrasyon, metadata füzyonu (yaş/cinsiyet/
+lezyon konumu — HAM10000'de var ama kullanılmıyor), dış veri (ISIC 2019/2020).
+
+## Drive otomasyonu (2026-10-10 kuruldu, ÇALIŞIYOR doğrulandı)
+Google Drive masaüstü uygulaması kurulu ve senkronize. Colab'ın Drive'a
+kaydettiği sonuçlar (`skin-cancer-detection-runs/latest/`) bu Mac'e otomatik
+iniyor — ConvNeXt koşusunda uçtan uca test edildi, hiç manuel zip indirmeye
+gerek kalmadı. Yol: `~/Library/CloudStorage/GoogleDrive-
 emreozkan877@gmail.com/Drive'ım/skin-cancer-detection-runs/`.
 
 Not: komut satırından (`ls`/Python) ilk erişimde "Operation timed out"
 hatası alınabilir — Finder'ı açıp Google Drive'a bir kez tıklamak
 (File Provider'ı "uyandırmak") bunu çözüyor.
 
-Tek bilinmeyen: Colab'ın Drive *mount* adımı `baseline-v1` koşusunda
-hata vermişti (`ValueError: mount failed`) — bu sefer çalışır mı
-belirsiz. Çalışmazsa yedek plan hâlâ geçerli: Colab'da
-`files.download()` ile zip indirip `~/Downloads/`'a düşürmek.
-
-(Eski bir Drive klasörü - `skin-cancer-detection-runs/20261004_192356`
-- dedup düzeltmesinden ÖNCEKİ, geçersiz bir koşuya ait; test seti 1972
-satır - doğrusu 986 olmalı. Yoksay, silinmedi ama kullanılmıyor.)
-
-Henüz başlanmayan diğer fikirler (sırayla): Swin V2 ve EfficientNetV2-S
-mimarileri, checkpoint ensemble (üç mimariyi birleştirmek), augmentation/
-görüntü boyutu büyütme, mel-threshold ayarı.
+(Eski/geçersiz Drive klasörleri var: `20261004_192356` dedup-öncesi geçersiz
+bir koşu, `20261010_164549` yarım kalmış bir deneme. Yoksay, sadece `latest`
+ve ona karşılık gelen en yeni tarih damgalı klasör güncel.)
 
 ## Unutulmaması gereken kurallar
 - `deri-kanseri-cnn-uygulamas.ipynb` dosyasına **asla dokunma** (senin ayrı,
@@ -68,4 +70,9 @@ görüntü boyutu büyütme, mel-threshold ayarı.
 - Git'e dosya eklerken her zaman dosya adıyla (`git add <dosya>`), asla
   `git add -A` kullanılmıyor (yukarıdaki dosyayı yanlışlıkla eklememek için)
 - Colab'da uzun eğitim koşarken sekmeyi arka planda bırakma / bilgisayarı
-  uykuya alma — runtime koptu/sıfırlandı, iki kere bu yüzden ilerleme kaybettik
+  uykuya alma — runtime koptu/sıfırlandı, birkaç kez bu yüzden ilerleme kaybettik
+- Colab'da notebook açarken **doğru branch'i** seçtiğinden emin ol (GitHub
+  dosya seçicisinde branch adını kontrol et) — bir kez `main`'i açıp yanlış
+  mimariyle (sessizce EfficientNet-B0'a düşerek) eğitime başlamıştık
+- 100MB üstü checkpoint'ler git'e giremiyor (GitHub limiti) — böyle
+  durumlarda sadece metrik/grafik dosyaları git'e girer, ağırlık Drive'da kalır
