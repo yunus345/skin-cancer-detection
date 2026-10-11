@@ -36,9 +36,9 @@ türünde (kanseri kaçırma) ~3 kat iyileşme — sadece mimari değişikliğiy
 Git'e dahil **edilmedi** — GitHub standart push 100MB üstü dosyaları
 reddediyor (`baseline-v1`'in 16MB'lik EfficientNet-B0 ağırlığından farklı,
 ConvNeXt-Tiny ~28M parametre ile çok daha büyük). İki yerde güvende:
-- Bu klasörde yerel diskte (`.gitignore`'a özel olarak eklendi)
-- Google Drive: `skin-cancer-detection-runs/latest/` (Drive Desktop ile
-  bu Mac'e senkronize)
+- Bu klasörde yerel diskte (`.gitignore`'da)
+- Google Drive: `skin-cancer-detection-runs/archive/convnext_tiny_v1/`
+  (`latest/` her yeni Colab koşusunda üzerine yazıldığı için kalıcı kopya burada)
 
 Modeli yeniden yüklemek için: `src.evaluation.evaluate --checkpoint
 baselines/convnext_tiny_v1/best_model.pt`

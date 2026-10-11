@@ -7,62 +7,58 @@ HAM10000 veri setiyle cilt lezyonu sınıflandırma (7 sınıf: akiec, bcc, bkl,
 df, mel, nv, vasc). PyTorch, transfer learning. Öğrenme amaçlı bir proje —
 bkz. CLAUDE.md.
 
-## Şu anki en iyi, güvenceli sonuç: `convnext_tiny_v1`
-- balanced_accuracy: **0.798** (%95 GA 0.746–0.846)
-- macro_f1: 0.774, mel_recall: 0.766
-- Kod `main`'de (merge edildi), küçük sonuç dosyaları (metrik/grafik) git'te
-  kalıcı. Ağırlık dosyası (106MB) GitHub'ın 100MB limitini aştığı için git'e
-  giremedi — Drive + yerel diskte duruyor (bkz. README).
-- Detaylı rapor: `baselines/convnext_tiny_v1/README.md`
+## Eğitilmiş modeller (test seti, hepsi `baselines/` altında)
 
-**Önceki referans `baseline-v1`** (EfficientNet-B0, balanced_accuracy=0.762,
-tamamen git'te, ağırlık dahil) hâlâ duruyor — `git checkout baseline-v1` ile
-erişilebilir, kıyaslama/ensemble için saklanıyor.
+| Model | macro_f1 | balanced_accuracy | mel_recall | Not |
+|---|---|---|---|---|
+| `baseline_v1` (EfficientNet-B0, 224px) | 0.698 | 0.762 | 0.626 | ağırlık git'te, `git checkout baseline-v1` |
+| `convnext_tiny_v1` (224px) | **0.774** | **0.798** | **0.766** | en iyi tek model |
+| `efficientnet_v2_s_v1` (384px) | 0.753 | 0.781 | 0.710 | ConvNeXt'ten farklı yerlerde hata yapıyor |
+
+Her klasörde README (ayrıntılı sonuçlar, güven aralıkları, bulgular) var.
+Ağırlıklar: `baseline_v1` git'te; diğerleri (50MB+) yerel diskte + Drive'da
+`skin-cancer-detection-runs/archive/<model adı>/` altında.
 
 ## Şu an neredeyiz?
-Mimari değişikliğinin tek başına büyük fark yarattığı doğrulandı
-(EfficientNet-B0 → ConvNeXt-Tiny: macro_f1 0.698→0.774, gerçek melanomu
-"iyi huylu" sanma 22 vakadan 7'ye). Plan "önce genişlik": 2-3 farklı
-mimariyi aynı tarifle eğit, sonra ensemble. Sıradaki mimari
-**EfficientNetV2-S** için kod hazır (2026-10-11), Colab'da koşulmayı bekliyor.
+Plan "önce genişlik": birkaç farklı mimariyi aynı tarifle eğit, sonra ensemble.
+İki güçlü model var. EfficientNetV2-S (2026-10-11) tek başına ConvNeXt'i
+geçmedi, ama hataları farklı yerlerde: V2-S daha az yanlış melanom alarmı
+veriyor, ConvNeXt melanomu çok daha az kaçırıyor (mel→nv 7'ye karşı 19). Bu,
+ensemble için umut verici. V2-S'te val_loss epoch ~11-14'ten sonra yükseldi,
+yani daha fazla epoch bu modele yaramaz.
 
-2026-10-11'de eklenenler:
-- Hız: mixed precision (AMP, sadece Colab GPU'sunda), paralel veri yükleme
-  (`--num-workers`, varsayılan 2), cudnn.benchmark. Yardımcı süreçlerin birebir
-  aynı augmentation'ı üretmesi hatası bulundu (deneyle) ve düzeltildi.
-- Kural koda yazıldı: `--image-size` verilmezse her mimari kendi ön-eğitim
-  boyutunu kullanıyor (B0/ConvNeXt 224px, V2-S 384px). Çözünürlük checkpoint'e
-  kaydediliyor; evaluate/tune_threshold/ensemble onu oradan okuyor.
-- `ensemble.py` gerçek checkpoint'lerle ilk kez çalıştı (aynı modelin iki
-  kopyası = tek model, doğrulandı); artık her modeli kendi çözünürlüğünde test ediyor.
+Altyapı (2026-10-11): Colab'da mixed precision (AMP), paralel veri yükleme
+(`--num-workers`, varsayılan 2), cudnn.benchmark. Çözünürlük checkpoint'e
+kaydediliyor; evaluate/tune_threshold/ensemble onu oradan okuyor (ensemble her
+modeli kendi çözünürlüğünde test ediyor).
 
 ## Sıradaki adım (tek, somut)
-Colab'da EfficientNetV2-S koşusu. Notebook hazır, artık `main`'i klonluyor:
+**Swin V2-Tiny** (transformer, 256px): üçlünün en farklı üyesi. Kod tarafında
+`build_model`'e eklenecek; son katmanı `classifier` değil `head` adında olduğu
+için `set_backbone_trainable` da güncellenmeli (yoksa Faz 1'de her şey donar,
+eğitim çöker). Sonra aynı Colab döngüsü.
+
+Colab döngüsü:
 1. Notebook'u **her seferinde şu linkten aç** (GitHub'daki en güncel hali gelir):
    https://colab.research.google.com/github/yunus345/skin-cancer-detection/blob/main/notebooks/00_project_setup.ipynb
    → T4 GPU
-2. Hücreleri sırayla çalıştır. İlk dakikalarda kontrol et:
-   `Mixed precision (AMP): on`, `Architecture: efficientnet_v2_s, image size:
-   384px`, Faz 2'de ~20 milyon parametre (Faz 1'de 8,967 görmek normal).
+2. İlk dakikalarda log'da `Mixed precision (AMP): on` ve doğru
+   `Architecture: ..., image size: ...px` satırını kontrol et.
 3. `CUDA out of memory` alırsan eğitim hücresine `--batch-size 16` ekle.
-4. Bitince Drive `latest/`'ten sonucu alıp `baselines/efficientnet_v2_s_v1/`
-   olarak kaydederiz, ConvNeXt ile kıyaslarız.
-
-Sonra: Swin V2-Tiny (256px). Son katmanı `head` adında, `set_backbone_trainable`
-buna göre güncellenmeli (yoksa Faz 1'de her şey donar, eğitim çöker).
+4. Bitince Drive uygulamasını ya da Finder'da Google Drive'ı aç (senkronu
+   tetikler). Sonucu `baselines/<model adı>/` + Drive `archive/<model adı>/`
+   olarak kaydederiz.
 
 Henüz başlanmayan diğer fikirler: mel-threshold ayarı, TTA (test-time
 augmentation), kalibrasyon, metadata füzyonu (yaş/cinsiyet/lezyon konumu —
 HAM10000'de var ama kullanılmıyor), dış veri (ISIC 2019/2020), ConvNeXt'i
 384px'te yeniden eğitmek (cilalama adayı, ~3 kat süre).
 
-**Ensemble'dan sonraki iyileştirme sırası (netleşti, 2026-10-10):** Önce 3
-mimariyi de düz ortalama ile birleştir → sonra **entegrasyonun kendisini**
-ince ayarla (ağırlıklı ortalama, sınıf-bazlı ağırlık, kalibrasyon — hiçbiri
-yeniden eğitim istemiyor, ucuz/hızlı) → **ancak hâlâ yetersizse ve zayıf
-halka netse**, en pahalı/son çare olarak tek bir mimariyi (örn. daha fazla
-epoch'la) yeniden eğitmeyi düşün. Entegrasyon ayarı, tek model yeniden
-eğitiminden önce gelmeli (daha ucuz, daha hızlı denenebilir).
+**Ensemble'dan sonraki iyileştirme sırası:** Önce modelleri düz ortalama ile
+birleştir → sonra **entegrasyonun kendisini** ince ayarla (ağırlıklı ortalama,
+sınıf-bazlı ağırlık, kalibrasyon — hiçbiri yeniden eğitim istemiyor) →
+**ancak hâlâ yetersizse ve zayıf halka netse**, son çare olarak tek bir
+mimariyi yeniden eğit.
 
 Dikkat: ensemble ağırlıkları ve hangi modellerin dahil edileceği
 **validation** setinde seçilmeli, test seti sadece en sonda bir kez
@@ -70,22 +66,17 @@ kullanılmalı. Test setine bakarak seçim yaparsak sonuç iyimser çıkar
 (leakage). `ensemble.py` şu an sadece test setinde çalışıyor; ağırlık
 ayarı aşamasında validation desteği eklenecek.
 
-## Drive otomasyonu (2026-10-10 kuruldu, ÇALIŞIYOR doğrulandı)
-Google Drive masaüstü uygulaması kurulu ve senkronize. Colab'ın Drive'a
-kaydettiği sonuçlar (`skin-cancer-detection-runs/latest/`) bu Mac'e otomatik
-iniyor — ConvNeXt koşusunda uçtan uca test edildi, hiç manuel zip indirmeye
-gerek kalmadı. Yol: `~/Library/CloudStorage/GoogleDrive-
-emreozkan877@gmail.com/Drive'ım/skin-cancer-detection-runs/`.
+## Drive
+Google Drive masaüstü uygulaması kurulu. Yol: `~/Library/CloudStorage/
+GoogleDrive-emreozkan877@gmail.com/Drive'ım/skin-cancer-detection-runs/`
+- `latest/`: Colab her koşuda buraya yazar, **bir önceki koşunun üzerine**.
+  Claude sonuçları buradan okur.
+- `archive/<model adı>/`: büyük ağırlıkların kalıcı kopyası (adlar
+  `baselines/` ile aynı). Bir sonuç kaydedilirken Claude buraya kopyalar.
 
-Not: komut satırından (`ls`/Python) ilk erişimde "Operation timed out"
-hatası alınabilir — Finder'ı açıp Google Drive'a bir kez tıklamak
-(File Provider'ı "uyandırmak") bunu çözüyor.
-
-Basitleştirildi (2026-10-10): artık sadece tek bir `latest/` klasörü var,
-tarih-damgalı arşiv kopyası kaldırıldı (kalıcı arşiv zaten git'teki
-`baselines/`'ta). Eski karışık klasörler (`20261004_192356`,
-`20261010_164549`, `20261010_185539`) silindi, veri kaybı yok (hepsi
-önce git/yerel disk ile MD5 doğrulaması yapılarak silindi).
+Notlar: Dosyalar Mac'e bazen ancak Drive uygulaması ya da Finder'da Google
+Drive açılınca iner. Komut satırından ilk erişimde "Operation timed out"
+alınırsa yine Finder'dan Google Drive'a bir kez tıklamak çözüyor.
 
 ## Unutulmaması gereken kurallar
 - `deri-kanseri-cnn-uygulamas.ipynb` dosyasına **asla dokunma** (senin ayrı,
@@ -98,5 +89,5 @@ tarih-damgalı arşiv kopyası kaldırıldı (kalıcı arşiv zaten git'teki
   Colab'a kaydedilmiş bir kopyanın hücreleri donmuş kalır: `git clone` sayesinde
   kod güncel gelir ama eğitim komutu eski kalabilir. Bir kez yanlış mimariyle
   (sessizce EfficientNet-B0'a düşerek) eğitime başlamıştık
-- 100MB üstü checkpoint'ler git'e giremiyor (GitHub limiti) — böyle
-  durumlarda sadece metrik/grafik dosyaları git'e girer, ağırlık Drive'da kalır
+- 50MB üstü ağırlıklar git'e girmiyor (`.gitignore`: `baselines/*/best_model.pt`);
+  yerel disk + Drive `archive/` olmak üzere iki kopya tutuluyor
