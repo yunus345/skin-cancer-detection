@@ -13,7 +13,10 @@ cudnn.benchmark); sonucu pratikte değiştirmezler.
 
 `main` (commit `771dcb8` ve sonrası), Colab notebook'undaki eğitim hücresi:
 `--architecture efficientnet_v2_s --feature-extract-epochs 5 --finetune-epochs 20 --patience 6`
-(çözünürlük otomatik 384px).
+(çözünürlük otomatik 384px). Batch size varsayılan 32: AMP sayesinde 384px'te
+T4'ün belleğine sığdı. Süre ölçülmedi; gözleme göre ConvNeXt koşusuna (~2 saat)
+yakın sürdü, oysa hesaplama yükü ~2 kat. Hız ayarlarının kabaca yarı yarıya
+kazanç sağladığını düşündürüyor.
 
 Eğitim 25 epoch'un tamamını bitirdi, patience tetiklenmedi. En iyi epoch: 21
 (val_f1=0.7494).
