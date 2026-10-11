@@ -29,10 +29,12 @@ def load_checkpoint(checkpoint_path: str, device: torch.device):
     # Eski checkpoint'lerde (baseline-v1 gibi) 'architecture' alani yok - o zaman tek
     # mimarimiz EfficientNet-B0'di, varsayilan olarak ona dusuyoruz (geriye uyumluluk).
     architecture = checkpoint.get('architecture', 'efficientnet_b0')
+    # 'image_size' alani da sonradan eklendi; ondan onceki checkpoint'lerin hepsi 224px'te egitildi.
+    image_size = checkpoint.get('image_size', 224)
     model = build_model(num_classes=len(labels), architecture=architecture)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to(device)
-    return model, labels
+    return model, labels, image_size
 
 
 def predict_probabilities(model, loader, device):
@@ -166,7 +168,7 @@ def main():
     parser.add_argument('--manifest', default='data/processed/manifest.csv', help='Manifest file with image_path,label,split columns')
     parser.add_argument('--checkpoint', default='models/best_model.pt', help='Checkpoint to evaluate (best_model.pt = best val-F1 epoch)')
     parser.add_argument('--batch-size', type=int, default=32)
-    parser.add_argument('--image-size', type=int, default=224)
+    parser.add_argument('--image-size', type=int, default=None, help="Varsayilan: checkpoint'in egitildigi boyut")
     parser.add_argument('--device', choices=['auto', 'cpu', 'cuda', 'mps'], default='auto')
     parser.add_argument('--output', default='models/test_metrics.json')
     parser.add_argument(
@@ -179,9 +181,11 @@ def main():
     device = select_device(args.device)
     print(f'Using device: {device}')
 
-    model, labels = load_checkpoint(args.checkpoint, device)
+    model, labels, trained_image_size = load_checkpoint(args.checkpoint, device)
+    image_size = args.image_size or trained_image_size
+    print(f'Image size: {image_size}px')
 
-    test_dataset = SkinCancerDataset(args.manifest, split='test', transform=build_transforms(args.image_size))
+    test_dataset = SkinCancerDataset(args.manifest, split='test', transform=build_transforms(image_size))
     if len(test_dataset) == 0:
         raise ValueError('Manifest must contain a non-empty test split. Run src.data.split_manifest first.')
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)

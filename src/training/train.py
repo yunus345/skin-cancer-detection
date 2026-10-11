@@ -12,12 +12,26 @@ from albumentations.pytorch import ToTensorV2
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score, precision_score, recall_score
 from torch import nn
 from torch.utils.data import DataLoader, get_worker_info
-from torchvision.models import ConvNeXt_Tiny_Weights, EfficientNet_B0_Weights, convnext_tiny, efficientnet_b0
+from torchvision.models import (
+    ConvNeXt_Tiny_Weights,
+    EfficientNet_B0_Weights,
+    EfficientNet_V2_S_Weights,
+    convnext_tiny,
+    efficientnet_b0,
+    efficientnet_v2_s,
+)
 
 from src.data.loader import SkinCancerDataset
 
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
+
+# Her mimarinin ImageNet'te on-egitildigi giris boyutu; --image-size verilmezse bu kullanilir.
+NATIVE_IMAGE_SIZE = {
+    'efficientnet_b0': 224,
+    'convnext_tiny': 224,
+    'efficientnet_v2_s': 384,
+}
 
 
 class AlbumentationsTransform:
@@ -81,10 +95,14 @@ def seed_augmentations_per_worker(worker_id):
 
 
 def build_model(num_classes: int, architecture: str = 'efficientnet_b0'):
-    # Her iki mimari de son katmanini ayni isimle (`classifier`) tutuyor - sadece Sequential
-    # icindeki Linear'in indeksi farkli (EfficientNet: [1], ConvNeXt: LayerNorm+Flatten sonrasi [2]).
+    # Tum mimariler son katmanini ayni isimle (`classifier`) tutuyor - sadece Sequential icindeki
+    # Linear'in indeksi farkli (EfficientNet B0/V2: [1], ConvNeXt: LayerNorm+Flatten sonrasi [2]).
     if architecture == 'efficientnet_b0':
         model = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
+        in_features = model.classifier[1].in_features
+        model.classifier[1] = nn.Linear(in_features, num_classes)
+    elif architecture == 'efficientnet_v2_s':
+        model = efficientnet_v2_s(weights=EfficientNet_V2_S_Weights.DEFAULT)
         in_features = model.classifier[1].in_features
         model.classifier[1] = nn.Linear(in_features, num_classes)
     elif architecture == 'convnext_tiny':
@@ -207,6 +225,7 @@ def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader,
                 'model_state_dict': model.state_dict(),
                 'labels': state['labels'],
                 'architecture': state['architecture'],
+                'image_size': state['image_size'],
                 'metrics': metrics,
             }, out_dir / 'best_model.pt')
             state['epochs_without_improvement'] = 0
@@ -245,6 +264,7 @@ def train_model(
     torch.backends.cudnn.benchmark = on_cuda
     scaler = torch.amp.GradScaler('cuda', enabled=on_cuda)
     print(f'Mixed precision (AMP): {"on" if on_cuda else "off"}, num_workers={num_workers}')
+    print(f'Architecture: {architecture}, image size: {image_size}px')
 
     train_dataset = SkinCancerDataset(manifest_path, split='train', transform=build_transforms(image_size, train=True))
     val_dataset = SkinCancerDataset(manifest_path, split='val', transform=build_transforms(image_size))
@@ -284,6 +304,7 @@ def train_model(
         'patience': patience,
         'labels': train_dataset.labels,
         'architecture': architecture,
+        'image_size': image_size,
         'history': [],
     }
 
@@ -321,6 +342,7 @@ def train_model(
         'model_state_dict': model.state_dict(),
         'labels': train_dataset.labels,
         'architecture': architecture,
+        'image_size': image_size,
         'metrics': final_metrics,
     }, checkpoint_path)
 
@@ -347,18 +369,19 @@ def main():
     parser.add_argument('--batch-size', type=int, default=32, help='Batch size')
     parser.add_argument('--learning-rate', type=float, default=1e-4, help='Learning rate for the feature-extraction phase')
     parser.add_argument('--finetune-lr', type=float, default=None, help='Learning rate for the fine-tuning phase (default: learning-rate / 10)')
-    parser.add_argument('--image-size', type=int, default=224, help='Input image size')
+    parser.add_argument('--image-size', type=int, default=None, help='Giris boyutu (varsayilan: mimarinin on-egitim boyutu)')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
     parser.add_argument('--device', choices=['auto', 'cpu', 'cuda', 'mps'], default='auto', help='Compute device; auto picks MPS > CUDA > CPU')
     parser.add_argument('--scheduler', choices=['none', 'cosine'], default='none', help='LR scheduler per phase (none = sabit LR)')
     parser.add_argument('--patience', type=int, default=3, help='Early stopping patience (val_f1 iyilesmeyen epoch sayisi)')
     parser.add_argument('--loss-fn', choices=['ce', 'focal'], default='ce', help='Loss fonksiyonu: ce (class-weighted CrossEntropy) veya focal')
     parser.add_argument('--focal-gamma', type=float, default=2.0, help='Focal loss gamma parametresi (sadece --loss-fn focal ile)')
-    parser.add_argument('--architecture', choices=['efficientnet_b0', 'convnext_tiny'], default='efficientnet_b0', help='Backbone mimarisi')
+    parser.add_argument('--architecture', choices=list(NATIVE_IMAGE_SIZE), default='efficientnet_b0', help='Backbone mimarisi')
     parser.add_argument('--num-workers', type=int, default=2, help='Veriyi arka planda hazirlayan yardimci surec sayisi (0 = ana surecte, sirayla)')
     args = parser.parse_args()
 
     finetune_lr = args.finetune_lr if args.finetune_lr is not None else args.learning_rate / 10
+    image_size = args.image_size or NATIVE_IMAGE_SIZE[args.architecture]
 
     train_model(
         manifest_path=args.manifest,
@@ -368,7 +391,7 @@ def main():
         learning_rate=args.learning_rate,
         finetune_lr=finetune_lr,
         batch_size=args.batch_size,
-        image_size=args.image_size,
+        image_size=image_size,
         seed=args.seed,
         device_arg=args.device,
         scheduler_name=args.scheduler,

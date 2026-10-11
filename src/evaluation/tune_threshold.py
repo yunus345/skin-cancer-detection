@@ -65,7 +65,7 @@ def main():
     parser.add_argument('--manifest', default='data/processed/manifest.csv')
     parser.add_argument('--checkpoint', default='models/best_model.pt')
     parser.add_argument('--batch-size', type=int, default=32)
-    parser.add_argument('--image-size', type=int, default=224)
+    parser.add_argument('--image-size', type=int, default=None, help="Varsayilan: checkpoint'in egitildigi boyut")
     parser.add_argument('--device', choices=['auto', 'cpu', 'cuda', 'mps'], default='auto')
     parser.add_argument(
         '--target-recall', type=float, default=0.85,
@@ -78,12 +78,13 @@ def main():
     device = select_device(args.device)
     print(f'Using device: {device}')
 
-    model, labels = load_checkpoint(args.checkpoint, device)
+    model, labels, trained_image_size = load_checkpoint(args.checkpoint, device)
     if 'mel' not in labels:
         raise ValueError('Checkpoint etiketleri arasında "mel" yok.')
     mel_idx = labels.index('mel')
+    image_size = args.image_size or trained_image_size
 
-    val_dataset = SkinCancerDataset(args.manifest, split='val', transform=build_transforms(args.image_size))
+    val_dataset = SkinCancerDataset(args.manifest, split='val', transform=build_transforms(image_size))
     if len(val_dataset) == 0:
         raise ValueError('Manifest must contain a non-empty val split.')
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)

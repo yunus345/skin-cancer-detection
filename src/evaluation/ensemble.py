@@ -30,7 +30,6 @@ def main():
     parser.add_argument('--checkpoints', nargs='+', required=True, help='Ortalanacak checkpoint dosyalari (en az 2)')
     parser.add_argument('--manifest', default='data/processed/manifest.csv')
     parser.add_argument('--batch-size', type=int, default=32)
-    parser.add_argument('--image-size', type=int, default=224)
     parser.add_argument('--device', choices=['auto', 'cpu', 'cuda', 'mps'], default='auto')
     parser.add_argument('--output', default='models/ensemble_test_metrics.json')
     parser.add_argument(
@@ -46,17 +45,12 @@ def main():
     device = select_device(args.device)
     print(f'Using device: {device}')
 
-    test_dataset = SkinCancerDataset(args.manifest, split='test', transform=build_transforms(args.image_size))
-    if len(test_dataset) == 0:
-        raise ValueError('Manifest must contain a non-empty test split. Run src.data.split_manifest first.')
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
-
     all_probs = []
     targets = None
     labels = None
     for checkpoint_path in args.checkpoints:
-        print(f'Checkpoint yükleniyor: {checkpoint_path}')
-        model, ckpt_labels = load_checkpoint(checkpoint_path, device)
+        model, ckpt_labels, image_size = load_checkpoint(checkpoint_path, device)
+        print(f'Checkpoint: {checkpoint_path} ({image_size}px)')
         if labels is None:
             labels = ckpt_labels
         elif labels != ckpt_labels:
@@ -64,6 +58,11 @@ def main():
                 f'{checkpoint_path} etiket sırası diğerlerinden farklı ({ckpt_labels} != {labels}) '
                 '- aynı pipeline/manifest ile eğitilmiş checkpoint\'ler kullanın.'
             )
+        # Her model kendi egitildigi cozunurlukte test edilir (orn. ConvNeXt 224px, EfficientNetV2-S 384px).
+        test_dataset = SkinCancerDataset(args.manifest, split='test', transform=build_transforms(image_size))
+        if len(test_dataset) == 0:
+            raise ValueError('Manifest must contain a non-empty test split. Run src.data.split_manifest first.')
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
         ckpt_targets, probs = predict_probabilities(model, test_loader, device)
         if targets is None:
             targets = ckpt_targets
