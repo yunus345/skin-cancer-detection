@@ -20,34 +20,40 @@ tamamen git'te, ağırlık dahil) hâlâ duruyor — `git checkout baseline-v1` 
 erişilebilir, kıyaslama/ensemble için saklanıyor.
 
 ## Şu an neredeyiz?
-Mimari değişikliğinin tek başına büyük fark yarattığı doğrulandı: sadece
-EfficientNet-B0 → ConvNeXt-Tiny değişikliğiyle (her şey eşit kalarak)
-macro_f1 0.698→0.774, mel_recall 0.626→0.766 (gerçek melanomayı "iyi huylu"
-sanma hatası 22 vakadan 7'ye düştü). Proje güvencede, acil yapılacak bir
-şey yok.
+Mimari değişikliğinin tek başına büyük fark yarattığı doğrulandı
+(EfficientNet-B0 → ConvNeXt-Tiny: macro_f1 0.698→0.774, gerçek melanomu
+"iyi huylu" sanma 22 vakadan 7'ye). Plan "önce genişlik": 2-3 farklı
+mimariyi aynı tarifle eğit, sonra ensemble. Sıradaki mimari
+**EfficientNetV2-S** için kod hazır (2026-10-11), Colab'da koşulmayı bekliyor.
+
+2026-10-11'de eklenenler:
+- Hız: mixed precision (AMP, sadece Colab GPU'sunda), paralel veri yükleme
+  (`--num-workers`, varsayılan 2), cudnn.benchmark. Yardımcı süreçlerin birebir
+  aynı augmentation'ı üretmesi hatası bulundu (deneyle) ve düzeltildi.
+- Kural koda yazıldı: `--image-size` verilmezse her mimari kendi ön-eğitim
+  boyutunu kullanıyor (B0/ConvNeXt 224px, V2-S 384px). Çözünürlük checkpoint'e
+  kaydediliyor; evaluate/tune_threshold/ensemble onu oradan okuyor.
+- `ensemble.py` gerçek checkpoint'lerle ilk kez çalıştı (aynı modelin iki
+  kopyası = tek model, doğrulandı); artık her modeli kendi çözünürlüğünde test ediyor.
 
 ## Sıradaki adım (tek, somut)
-Sırada: **Swin V2** ve/veya **EfficientNetV2-S** mimarilerini aynı şekilde
-eğitip `convnext_tiny_v1` ile kıyaslamak — amaç tek kazanan seçmek değil,
-makul çıkan hepsini **ensemble**'da birleştirmek (biri belirgin kötü
-çıkarsa o dışarıda bırakılır).
+Colab'da EfficientNetV2-S koşusu. Notebook hazır, artık `main`'i klonluyor:
+1. Colab → GitHub'dan `notebooks/00_project_setup.ipynb` aç (branch: **main**)
+   → T4 GPU
+2. Hücreleri sırayla çalıştır. İlk dakikalarda kontrol et:
+   `Mixed precision (AMP): on`, `Architecture: efficientnet_v2_s, image size:
+   384px`, Faz 2'de ~20 milyon parametre (Faz 1'de 8,967 görmek normal).
+3. `CUDA out of memory` alırsan eğitim hücresine `--batch-size 16` ekle.
+4. Bitince Drive `latest/`'ten sonucu alıp `baselines/efficientnet_v2_s_v1/`
+   olarak kaydederiz, ConvNeXt ile kıyaslarız.
 
-Bu sıradaki koşularda, artık "saf mimari etkisi" referansımız (bu ConvNeXt
-sonucu) elimizde olduğu için, ek olarak paketleyebiliriz:
-- Görüntü boyutunu artırmak (224px → 320-384px, mimariye göre)
-- Hız optimizasyonları: mixed precision (AMP), DataLoader `num_workers`,
-  daha büyük batch size — sonucu değiştirmiyor, sadece Colab süresini kısaltır
-  (ConvNeXt koşusu ~2 saat sürdü, T4'te daha büyük modellerle daha da uzayabilir)
+Sonra: Swin V2-Tiny (256px). Son katmanı `head` adında, `set_backbone_trainable`
+buna göre güncellenmeli (yoksa Faz 1'de her şey donar, eğitim çöker).
 
-Henüz kod tarafında hazır değil — bir sonraki oturumda `build_model`'e
-Swin V2 / EfficientNetV2-S eklemekle başlanır (ConvNeXt eklerken izlenen
-yöntemle aynı: her mimarinin "classifier" katman ismini kontrol et, aynı
-`set_backbone_trainable` mantığı çoğunlukla değişmeden çalışıyor).
-
-Henüz başlanmayan diğer fikirler: checkpoint ensemble (`ensemble.py` zaten
-yazılı, henüz gerçek checkpoint'lerle test edilmedi), mel-threshold ayarı,
-TTA (test-time augmentation), kalibrasyon, metadata füzyonu (yaş/cinsiyet/
-lezyon konumu — HAM10000'de var ama kullanılmıyor), dış veri (ISIC 2019/2020).
+Henüz başlanmayan diğer fikirler: mel-threshold ayarı, TTA (test-time
+augmentation), kalibrasyon, metadata füzyonu (yaş/cinsiyet/lezyon konumu —
+HAM10000'de var ama kullanılmıyor), dış veri (ISIC 2019/2020), ConvNeXt'i
+384px'te yeniden eğitmek (cilalama adayı, ~3 kat süre).
 
 **Ensemble'dan sonraki iyileştirme sırası (netleşti, 2026-10-10):** Önce 3
 mimariyi de düz ortalama ile birleştir → sonra **entegrasyonun kendisini**
@@ -56,6 +62,12 @@ yeniden eğitim istemiyor, ucuz/hızlı) → **ancak hâlâ yetersizse ve zayıf
 halka netse**, en pahalı/son çare olarak tek bir mimariyi (örn. daha fazla
 epoch'la) yeniden eğitmeyi düşün. Entegrasyon ayarı, tek model yeniden
 eğitiminden önce gelmeli (daha ucuz, daha hızlı denenebilir).
+
+Dikkat: ensemble ağırlıkları ve hangi modellerin dahil edileceği
+**validation** setinde seçilmeli, test seti sadece en sonda bir kez
+kullanılmalı. Test setine bakarak seçim yaparsak sonuç iyimser çıkar
+(leakage). `ensemble.py` şu an sadece test setinde çalışıyor; ağırlık
+ayarı aşamasında validation desteği eklenecek.
 
 ## Drive otomasyonu (2026-10-10 kuruldu, ÇALIŞIYOR doğrulandı)
 Google Drive masaüstü uygulaması kurulu ve senkronize. Colab'ın Drive'a
