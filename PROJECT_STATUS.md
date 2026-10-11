@@ -38,7 +38,8 @@ mimariyi aynı tarifle eğit, sonra ensemble. Sıradaki mimari
 
 ## Sıradaki adım (tek, somut)
 Colab'da EfficientNetV2-S koşusu. Notebook hazır, artık `main`'i klonluyor:
-1. Colab → GitHub'dan `notebooks/00_project_setup.ipynb` aç (branch: **main**)
+1. Notebook'u **her seferinde şu linkten aç** (GitHub'daki en güncel hali gelir):
+   https://colab.research.google.com/github/yunus345/skin-cancer-detection/blob/main/notebooks/00_project_setup.ipynb
    → T4 GPU
 2. Hücreleri sırayla çalıştır. İlk dakikalarda kontrol et:
    `Mixed precision (AMP): on`, `Architecture: efficientnet_v2_s, image size:
@@ -93,8 +94,9 @@ tarih-damgalı arşiv kopyası kaldırıldı (kalıcı arşiv zaten git'teki
   `git add -A` kullanılmıyor (yukarıdaki dosyayı yanlışlıkla eklememek için)
 - Colab'da uzun eğitim koşarken sekmeyi arka planda bırakma / bilgisayarı
   uykuya alma — runtime koptu/sıfırlandı, birkaç kez bu yüzden ilerleme kaybettik
-- Colab'da notebook açarken **doğru branch'i** seçtiğinden emin ol (GitHub
-  dosya seçicisinde branch adını kontrol et) — bir kez `main`'i açıp yanlış
-  mimariyle (sessizce EfficientNet-B0'a düşerek) eğitime başlamıştık
+- Colab notebook'unu her zaman yukarıdaki GitHub linkinden aç. Drive'a ya da
+  Colab'a kaydedilmiş bir kopyanın hücreleri donmuş kalır: `git clone` sayesinde
+  kod güncel gelir ama eğitim komutu eski kalabilir. Bir kez yanlış mimariyle
+  (sessizce EfficientNet-B0'a düşerek) eğitime başlamıştık
 - 100MB üstü checkpoint'ler git'e giremiyor (GitHub limiti) — böyle
   durumlarda sadece metrik/grafik dosyaları git'e girer, ağırlık Drive'da kalır
