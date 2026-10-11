@@ -11,7 +11,7 @@ import torch
 from albumentations.pytorch import ToTensorV2
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score, precision_score, recall_score
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, get_worker_info
 from torchvision.models import ConvNeXt_Tiny_Weights, EfficientNet_B0_Weights, convnext_tiny, efficientnet_b0
 
 from src.data.loader import SkinCancerDataset
@@ -72,6 +72,14 @@ def build_transforms(image_size: int, train: bool = False):
     return AlbumentationsTransform(compose)
 
 
+def seed_augmentations_per_worker(worker_id):
+    # Albumentations Compose kendi ic rastgele uretecini tutuyor ve DataLoader her yardimci
+    # surece bunun ayni kopyasini gonderiyor; yeniden tohumlanmazsa tum yardimcilar ayni
+    # "rastgele" augmentation dizisini uretir. worker_info.seed her yardimci icin farkli.
+    worker_info = get_worker_info()
+    worker_info.dataset.transform.compose.set_random_seed(worker_info.seed)
+
+
 def build_model(num_classes: int, architecture: str = 'efficientnet_b0'):
     # Her iki mimari de son katmanini ayni isimle (`classifier`) tutuyor - sadece Sequential
     # icindeki Linear'in indeksi farkli (EfficientNet: [1], ConvNeXt: LayerNorm+Flatten sonrasi [2]).
@@ -125,13 +133,13 @@ def select_device(preferred: str = 'auto') -> torch.device:
     return torch.device('cpu')
 
 
-def evaluate(model, loader, device, criterion=None):
+def evaluate(model, loader, device, criterion=None, use_amp=False):
     model.eval()
     predictions = []
     labels = []
     losses = []
 
-    with torch.no_grad():
+    with torch.no_grad(), torch.autocast(device_type='cuda', dtype=torch.float16, enabled=use_amp):
         for batch_images, batch_labels in loader:
             batch_images = batch_images.to(device)
             batch_labels = batch_labels.to(device)
@@ -152,11 +160,12 @@ def evaluate(model, loader, device, criterion=None):
     }
 
 
-def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader, val_loader, criterion, device, out_dir, state):
+def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader, val_loader, criterion, device, out_dir, state, scaler):
     """Trains for num_epochs, mutating `state` (best_f1/best_metrics/epochs_without_improvement/global_epoch).
 
     Returns True if early stopping triggered during this phase.
     """
+    use_amp = scaler.is_enabled()
     for _ in range(num_epochs):
         state['global_epoch'] += 1
         current_lr = optimizer.param_groups[0]['lr']
@@ -166,15 +175,19 @@ def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader,
             images = images.to(device)
             labels = labels.to(device)
             optimizer.zero_grad()
-            logits = model(images)
-            loss = criterion(logits, labels)
-            loss.backward()
-            optimizer.step()
+            with torch.autocast(device_type='cuda', dtype=torch.float16, enabled=use_amp):
+                logits = model(images)
+                loss = criterion(logits, labels)
+            # float16'da cok kucuk gradyanlar sifira yuvarlanabilir; scaler loss'u buyutup
+            # geri-yayilimi yapar, optimizer adimindan once gradyanlari eski olcegine indirir.
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
             train_loss += loss.item()
         if scheduler is not None:
             scheduler.step()
 
-        metrics = evaluate(model, val_loader, device, criterion)
+        metrics = evaluate(model, val_loader, device, criterion, use_amp=use_amp)
         metrics['phase'] = phase_name
         avg_train_loss = train_loss / max(len(train_loader), 1)
         print(
@@ -221,10 +234,17 @@ def train_model(
     loss_fn: str = 'ce',
     focal_gamma: float = 2.0,
     architecture: str = 'efficientnet_b0',
+    num_workers: int = 2,
 ):
     torch.manual_seed(seed)
     device = select_device(device_arg)
     print(f'Using device: {device}')
+
+    # Hiz ayarlari sadece CUDA'da (Colab GPU) acik; Mac'te (MPS) davranis eskisiyle ayni kalir.
+    on_cuda = device.type == 'cuda'
+    torch.backends.cudnn.benchmark = on_cuda
+    scaler = torch.amp.GradScaler('cuda', enabled=on_cuda)
+    print(f'Mixed precision (AMP): {"on" if on_cuda else "off"}, num_workers={num_workers}')
 
     train_dataset = SkinCancerDataset(manifest_path, split='train', transform=build_transforms(image_size, train=True))
     val_dataset = SkinCancerDataset(manifest_path, split='val', transform=build_transforms(image_size))
@@ -243,8 +263,15 @@ def train_model(
     else:
         criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    loader_kwargs = dict(
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=on_cuda,
+        persistent_workers=num_workers > 0,
+        worker_init_fn=seed_augmentations_per_worker,
+    )
+    train_loader = DataLoader(train_dataset, shuffle=True, **loader_kwargs)
+    val_loader = DataLoader(val_dataset, shuffle=False, **loader_kwargs)
 
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -273,7 +300,7 @@ def train_model(
     scheduler = build_scheduler(optimizer, feature_extract_epochs)
     stopped_early = run_phase(
         model, 'feature_extract', feature_extract_epochs, optimizer, scheduler,
-        train_loader, val_loader, criterion, device, out_dir, state,
+        train_loader, val_loader, criterion, device, out_dir, state, scaler,
     )
 
     # Faz 2 - fine-tuning: butun ag aciliyor, daha dusuk bir learning rate ile devam ediyor.
@@ -285,7 +312,7 @@ def train_model(
         scheduler = build_scheduler(optimizer, finetune_epochs)
         run_phase(
             model, 'finetune', finetune_epochs, optimizer, scheduler,
-            train_loader, val_loader, criterion, device, out_dir, state,
+            train_loader, val_loader, criterion, device, out_dir, state, scaler,
         )
 
     final_metrics = state['best_metrics'] or evaluate(model, val_loader, device, criterion)
@@ -328,6 +355,7 @@ def main():
     parser.add_argument('--loss-fn', choices=['ce', 'focal'], default='ce', help='Loss fonksiyonu: ce (class-weighted CrossEntropy) veya focal')
     parser.add_argument('--focal-gamma', type=float, default=2.0, help='Focal loss gamma parametresi (sadece --loss-fn focal ile)')
     parser.add_argument('--architecture', choices=['efficientnet_b0', 'convnext_tiny'], default='efficientnet_b0', help='Backbone mimarisi')
+    parser.add_argument('--num-workers', type=int, default=2, help='Veriyi arka planda hazirlayan yardimci surec sayisi (0 = ana surecte, sirayla)')
     args = parser.parse_args()
 
     finetune_lr = args.finetune_lr if args.finetune_lr is not None else args.learning_rate / 10
@@ -348,6 +376,7 @@ def main():
         loss_fn=args.loss_fn,
         focal_gamma=args.focal_gamma,
         architecture=args.architecture,
+        num_workers=args.num_workers,
     )
 
 
