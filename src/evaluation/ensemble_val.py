@@ -10,6 +10,7 @@ import argparse
 from itertools import combinations
 
 import numpy as np
+from src.evaluation.evaluate import apply_threshold_override
 from sklearn.metrics import balanced_accuracy_score, f1_score, precision_score, recall_score
 
 MODELS = {
@@ -93,14 +94,31 @@ def weight_study(probs, targets, mel_idx, n_bootstrap=1000, seed=0):
               f'({low:+.3f}, {high:+.3f}) {(diff > 0).mean() * 100:15.0f}% {s["mel_recall"]:6.3f}')
 
 
+def mel_threshold_table(probs, targets, labels):
+    """Kalibre 4'lu ensemble'da: 'mel olasiligi esigi gecerse mel de' kuralinin denge tablosu."""
+    mel_idx, nv_idx = labels.index('mel'), labels.index('nv')
+    avg = np.mean(list(probs.values()), axis=0)
+    print(f'{"Esik":>8} {"F1":>6} {"melR":>6} {"melP":>6} {"yakalanan mel":>14} {"mel->nv":>8} {"mel alarmi":>11} {"yanlis alarm":>13}')
+    for threshold in [None, 0.5, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1]:
+        pred = apply_threshold_override(avg, mel_idx, threshold)
+        s = score(targets, pred, mel_idx)
+        is_mel, said_mel = targets == mel_idx, pred == mel_idx
+        label = 'argmax' if threshold is None else f'{threshold:.2f}'
+        print(f'{label:>8} {s["macro_f1"]:6.3f} {s["mel_recall"]:6.3f} {s["mel_precision"]:6.3f} '
+              f'{f"{(is_mel & said_mel).sum()}/{is_mel.sum()}":>14} {(is_mel & (pred == nv_idx)).sum():8d} '
+              f'{said_mel.sum():11d} {(said_mel & ~is_mel).sum():13d}')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Ensemble kombinasyonlarini validation setinde karsilastir.')
     parser.add_argument('--calibrate', action='store_true',
                         help='Ortalamadan once her modeli validation setinde temperature scaling ile kalibre et')
     parser.add_argument('--weight-study', action='store_true',
                         help='Kalibre 4lu ensemble uzerinde model cikarma ve B0 agirligi karsilastirmasi')
+    parser.add_argument('--mel-threshold-table', action='store_true',
+                        help='Kalibre 4lu ensemble icin melanom esigi denge tablosu')
     args = parser.parse_args()
-    if args.weight_study:
+    if args.weight_study or args.mel_threshold_table:
         args.calibrate = True
 
     logits, targets, labels = load_split('val')
@@ -115,6 +133,9 @@ def main():
     probs = {name: softmax(l / temperatures[name]) for name, l in logits.items()}
     if args.weight_study:
         weight_study(probs, targets, mel_idx)
+        return
+    if args.mel_threshold_table:
+        mel_threshold_table(probs, targets, labels)
         return
 
     rows = []
