@@ -14,6 +14,7 @@ bkz. CLAUDE.md.
 | `baseline_v1` (EfficientNet-B0, 224px) | 0.698 | 0.762 | 0.626 | ağırlık git'te, `git checkout baseline-v1` |
 | `convnext_tiny_v1` (224px) | **0.774** | **0.798** | **0.766** | en iyi tek model |
 | `efficientnet_v2_s_v1` (384px) | 0.753 | 0.781 | 0.710 | ConvNeXt'ten farklı yerlerde hata yapıyor |
+| `swin_v2_t_v1` (256px, Kaggle) | 0.755 | **0.813** | 0.626 | nadir sınıflarda en iyi, melanomda zayıf |
 
 Her klasörde README (ayrıntılı sonuçlar, güven aralıkları, bulgular) var.
 Ağırlıklar: `baseline_v1` git'te; diğerleri (50MB+) yerel diskte + Drive'da
@@ -21,34 +22,30 @@ Ağırlıklar: `baseline_v1` git'te; diğerleri (50MB+) yerel diskte + Drive'da
 
 ## Şu an neredeyiz?
 Plan "önce genişlik": birkaç farklı mimariyi aynı tarifle eğit, sonra ensemble.
-İki güçlü model var. EfficientNetV2-S (2026-10-11) tek başına ConvNeXt'i
-geçmedi, ama hataları farklı yerlerde: V2-S daha az yanlış melanom alarmı
-veriyor, ConvNeXt melanomu çok daha az kaçırıyor (mel→nv 7'ye karşı 19). Bu,
-ensemble için umut verici. V2-S'te val_loss epoch ~11-14'ten sonra yükseldi,
-yani daha fazla epoch bu modele yaramaz.
+**Genişlik aşaması bitti (2026-10-13).** Dört model var; üç güçlü model
+(ConvNeXt, V2-S, Swin) farklı yerlerde güçlü: ConvNeXt melanomu en az kaçıran
+(mel→nv 7), Swin nadir sınıflarda en iyi (balanced_accuracy 0.813) ama
+melanomda zayıf (mel→nv 17), V2-S en az yanlış alarm veren ikinci model.
 
-Altyapı (2026-10-11): Colab'da mixed precision (AMP), paralel veri yükleme
-(`--num-workers`, varsayılan 2), cudnn.benchmark. Çözünürlük checkpoint'e
-kaydediliyor; evaluate/tune_threshold/ensemble onu oradan okuyor (ensemble her
-modeli kendi çözünürlüğünde test ediyor).
+Altyapı: Eğitim artık **Kaggle**'da (haftada ~30 saat ücretsiz GPU, arka planda
+çalışır). Mac'te `~/.kaggle/kaggle.json` kurulu; Claude notebook'u gönderip
+sonucu kendisi çekiyor. Swin Kaggle'da epoch başına ~1.7 dk sürdü (toplam ~40
+dk); Colab'da benzer modeller ~5 dk/epoch sürüyordu, Colab'ın 2 CPU'su veri
+yüklemede darboğaz olmuş olabilir. Colab notebook'u yedek olarak duruyor.
 
 ## Sıradaki adım (tek, somut)
-**Swin V2-Tiny** (transformer, 256px) Colab koşusu: üçlünün en farklı üyesi.
-Kod hazır (2026-10-13): `build_model`'de var, `set_backbone_trainable` artık
-`head` adlı son katmanı da donmadan bırakıyor (Faz 1'de 5,383 parametre), her
-epoch'un süresi log'a (`sure=...dk`) ve `training_history.json`'a yazılıyor.
-Notebook'taki eğitim hücresi `--architecture swin_v2_t`.
+**Ensemble:** önce `ensemble.py`'ye validation seti desteği eklemek (model
+seçimi ve ağırlıklar validation'da seçilecek, test sadece en sonda bir kez).
+Sonra ConvNeXt + V2-S + Swin (+ B0?) düz ortalama → ağırlıklı ortalama /
+kalibrasyon. Bu aşama eğitim istemiyor, Mac'te yapılabilir.
 
-Colab döngüsü:
-1. Notebook'u **her seferinde şu linkten aç** (GitHub'daki en güncel hali gelir):
-   https://colab.research.google.com/github/yunus345/skin-cancer-detection/blob/main/notebooks/00_project_setup.ipynb
-   → T4 GPU
-2. İlk dakikalarda log'da `Mixed precision (AMP): on` ve doğru
-   `Architecture: ..., image size: ...px` satırını kontrol et.
-3. `CUDA out of memory` alırsan eğitim hücresine `--batch-size 16` ekle.
-4. Bitince Drive uygulamasını ya da Finder'da Google Drive'ı aç (senkronu
-   tetikler). Sonucu `baselines/<model adı>/` + Drive `archive/<model adı>/`
-   olarak kaydederiz.
+Kaggle döngüsü (yeni bir model eğitmek gerekirse):
+1. [kaggle/skin-cancer-train.ipynb](kaggle/skin-cancer-train.ipynb) ilk hücresinde
+   `ARCHITECTURE`'ı değiştir, kodu GitHub'a gönder.
+2. `kaggle kernels push -p kaggle` (Mac'te, SSL için `SSL_CERT_FILE` certifi'ye
+   ayarlı). İlerleme: https://www.kaggle.com/code/yunusemreozkan/skin-cancer-train
+3. Bitince `kaggle kernels output yunusemreozkan/skin-cancer-train -p <klasör>`
+   → `baselines/<model adı>/` + Drive `archive/<model adı>/`.
 
 Henüz başlanmayan diğer fikirler: mel-threshold ayarı, TTA (test-time
 augmentation), kalibrasyon, metadata füzyonu (yaş/cinsiyet/lezyon konumu —
