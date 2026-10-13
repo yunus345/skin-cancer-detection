@@ -33,10 +33,11 @@ kaydediliyor; evaluate/tune_threshold/ensemble onu oradan okuyor (ensemble her
 modeli kendi çözünürlüğünde test ediyor).
 
 ## Sıradaki adım (tek, somut)
-**Swin V2-Tiny** (transformer, 256px): üçlünün en farklı üyesi. Kod tarafında
-`build_model`'e eklenecek; son katmanı `classifier` değil `head` adında olduğu
-için `set_backbone_trainable` da güncellenmeli (yoksa Faz 1'de her şey donar,
-eğitim çöker). Sonra aynı Colab döngüsü.
+**Swin V2-Tiny** (transformer, 256px) Colab koşusu: üçlünün en farklı üyesi.
+Kod hazır (2026-10-13): `build_model`'de var, `set_backbone_trainable` artık
+`head` adlı son katmanı da donmadan bırakıyor (Faz 1'de 5,383 parametre), her
+epoch'un süresi log'a (`sure=...dk`) ve `training_history.json`'a yazılıyor.
+Notebook'taki eğitim hücresi `--architecture swin_v2_t`.
 
 Colab döngüsü:
 1. Notebook'u **her seferinde şu linkten aç** (GitHub'daki en güncel hali gelir):
@@ -51,8 +52,8 @@ Colab döngüsü:
 
 Henüz başlanmayan diğer fikirler: mel-threshold ayarı, TTA (test-time
 augmentation), kalibrasyon, metadata füzyonu (yaş/cinsiyet/lezyon konumu —
-HAM10000'de var ama kullanılmıyor), dış veri (ISIC 2019/2020), ConvNeXt'i
-384px'te yeniden eğitmek (cilalama adayı, ~3 kat süre).
+HAM10000'de var ama kullanılmıyor), dış veri ve ConvNeXt'i 384px'te yeniden
+eğitmek (ikisi için aşağıdaki "Sonraya bırakılan konular"a bak).
 
 **Ensemble'dan sonraki iyileştirme sırası:** Önce modelleri düz ortalama ile
 birleştir → sonra **entegrasyonun kendisini** ince ayarla (ağırlıklı ortalama,
@@ -65,6 +66,28 @@ Dikkat: ensemble ağırlıkları ve hangi modellerin dahil edileceği
 kullanılmalı. Test setine bakarak seçim yaparsak sonuç iyimser çıkar
 (leakage). `ensemble.py` şu an sadece test setinde çalışıyor; ağırlık
 ayarı aşamasında validation desteği eklenecek.
+
+## Sonraya bırakılan konular (2026-10-11'de konuşuldu, karar verilmedi)
+- **Kıyas hedefi (ISIC 2018, balanced accuracy):** Ek veri kullanmayanların
+  en iyilerinden Zhuang ve ark. 0.845 (senin paylaştığın Sun Yat-sen raporu:
+  SENet-154 + PNASNet ensemble). Birinci MetaOptima 0.885, ama ~37.800 ek
+  görüntüyle. Gerçekçi hedef (tahmin): ek verisiz 0.82-0.85. Test setleri
+  farklı olduğu için kıyas yaklaşık; 1-2 puanlık farklar gürültü olabilir.
+- **Daha büyük model / ücretli A100:** Büyüklük ana kaldıraç değil (8 bin
+  görüntüde 20-28M parametreli modellerimiz bile ezberliyor). Sıra: ensemble
+  → çözünürlük (ConvNeXt-T @384, T4'te ~3 saat) → hâlâ gerekirse büyük model
+  (A100'de en verimli aday EfficientNetV2-M @480). 3 saati geçecek ilk
+  koşudan önce koda "kaldığı yerden devam" özelliği eklenmeli.
+- **Ek veri:** Ek verisiz ensemble bittikten sonra. Önce tek modelle dene:
+  ConvNeXt-T + ISIC 2019'un HAM10000 dışındaki ~15 bin görüntüsü, sonuç
+  `convnext_tiny_v1` ile aynı val/test'te karşılaştırılır. **Dikkat:** ISIC
+  2019 HAM10000'in tamamını içeriyor; tekrarlar temizlenmezse test
+  görüntüleri eğitime girer. Yarı yolda karıştırma yok (bir model ek verili,
+  diğerleri ek verisiz olmaz).
+- **Ensemble'da kalibrasyon:** ConvNeXt ve V2-S aşırı özgüvenli (val_loss
+  dipten sonra yükseliyor). Olasılık ortalamasında daha emin konuşan model
+  kazandığı için, ortalamadan önce her modeli validation setinde temperature
+  scaling ile kalibre etmek değerlendirilecek.
 
 ## Drive
 Google Drive masaüstü uygulaması kurulu. Yol: `~/Library/CloudStorage/

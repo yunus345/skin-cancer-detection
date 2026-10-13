@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 
 import albumentations as A
@@ -16,9 +17,11 @@ from torchvision.models import (
     ConvNeXt_Tiny_Weights,
     EfficientNet_B0_Weights,
     EfficientNet_V2_S_Weights,
+    Swin_V2_T_Weights,
     convnext_tiny,
     efficientnet_b0,
     efficientnet_v2_s,
+    swin_v2_t,
 )
 
 from src.data.loader import SkinCancerDataset
@@ -31,6 +34,7 @@ NATIVE_IMAGE_SIZE = {
     'efficientnet_b0': 224,
     'convnext_tiny': 224,
     'efficientnet_v2_s': 384,
+    'swin_v2_t': 256,
 }
 
 
@@ -95,8 +99,8 @@ def seed_augmentations_per_worker(worker_id):
 
 
 def build_model(num_classes: int, architecture: str = 'efficientnet_b0'):
-    # Tum mimariler son katmanini ayni isimle (`classifier`) tutuyor - sadece Sequential icindeki
-    # Linear'in indeksi farkli (EfficientNet B0/V2: [1], ConvNeXt: LayerNorm+Flatten sonrasi [2]).
+    # CNN'ler son katmanini `classifier` adli bir Sequential icinde tutuyor (Linear'in indeksi farkli:
+    # EfficientNet B0/V2: [1], ConvNeXt: LayerNorm+Flatten sonrasi [2]); Swin'de ise tek bir `head` Linear'i.
     if architecture == 'efficientnet_b0':
         model = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
         in_features = model.classifier[1].in_features
@@ -109,6 +113,9 @@ def build_model(num_classes: int, architecture: str = 'efficientnet_b0'):
         model = convnext_tiny(weights=ConvNeXt_Tiny_Weights.DEFAULT)
         in_features = model.classifier[2].in_features
         model.classifier[2] = nn.Linear(in_features, num_classes)
+    elif architecture == 'swin_v2_t':
+        model = swin_v2_t(weights=Swin_V2_T_Weights.DEFAULT)
+        model.head = nn.Linear(model.head.in_features, num_classes)
     else:
         raise ValueError(f'Bilinmeyen mimari: {architecture}')
     return model
@@ -116,8 +123,10 @@ def build_model(num_classes: int, architecture: str = 'efficientnet_b0'):
 
 def set_backbone_trainable(model: nn.Module, trainable: bool) -> None:
     """Freeze (trainable=False) or unfreeze the pretrained backbone; the classifier head is left untouched."""
+    # Son katman CNN'lerde `classifier`, Swin'de `head` adini tasiyor; ikisi de donmadan kaliyor.
+    # Yeni bir mimari eklerken son katmanin adi burada yoksa Faz 1'de tum model donar.
     for name, param in model.named_parameters():
-        if not name.startswith('classifier'):
+        if not name.startswith(('classifier', 'head')):
             param.requires_grad = trainable
 
 
@@ -186,6 +195,7 @@ def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader,
     use_amp = scaler.is_enabled()
     for _ in range(num_epochs):
         state['global_epoch'] += 1
+        epoch_start = time.time()
         current_lr = optimizer.param_groups[0]['lr']
         model.train()
         train_loss = 0.0
@@ -208,15 +218,18 @@ def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader,
         metrics = evaluate(model, val_loader, device, criterion, use_amp=use_amp)
         metrics['phase'] = phase_name
         avg_train_loss = train_loss / max(len(train_loader), 1)
+        epoch_seconds = time.time() - epoch_start
         print(
             f'[{phase_name}] Epoch {state["global_epoch"]} - lr={current_lr:.2e} train_loss={avg_train_loss:.4f} '
             f'val_loss={metrics["loss"]:.4f} val_accuracy={metrics["accuracy"]:.4f} '
-            f'val_balanced_accuracy={metrics["balanced_accuracy"]:.4f} val_f1={metrics["f1"]:.4f}'
+            f'val_balanced_accuracy={metrics["balanced_accuracy"]:.4f} val_f1={metrics["f1"]:.4f} '
+            f'sure={epoch_seconds / 60:.1f}dk'
         )
         history_entry = dict(metrics)
         history_entry['epoch'] = state['global_epoch']
         history_entry['train_loss'] = avg_train_loss
         history_entry['lr'] = current_lr
+        history_entry['epoch_seconds'] = epoch_seconds
         state['history'].append(history_entry)
         if metrics['f1'] > state['best_f1']:
             state['best_f1'] = metrics['f1']
