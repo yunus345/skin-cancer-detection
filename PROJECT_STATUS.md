@@ -81,6 +81,13 @@ ayarı aşamasında validation desteği eklenecek.
   2019 HAM10000'in tamamını içeriyor; tekrarlar temizlenmezse test
   görüntüleri eğitime girer. Yarı yolda karıştırma yok (bir model ek verili,
   diğerleri ek verisiz olmaz).
+- **Dış doğrulama (projenin en sonunda, bir kez):** Kullanıcı farklı kaynaktan
+  bir test seti istiyor (HAM10000 test seti aynı klinik/cihazlardan). En iyi
+  aday ISIC 2018 resmi test seti (~1500 görüntü): 0.845 ile aynı sette kıyas
+  sağlar. Etiketler ISIC veri sayfasında olabilir ya da tahminler ISIC canlı
+  leaderboard'una yüklenir (o aşamada kontrol et). **Kural:** dış test seti
+  ek veriden ÖNCE belirlenip kenara ayrılmalı; ek veri (ör. ISIC 2019) bu setle
+  çakışan görüntülerden temizlenmeli. Skorların düşmesi beklenir.
 - **Ensemble'da kalibrasyon:** ConvNeXt ve V2-S aşırı özgüvenli (val_loss
   dipten sonra yükseliyor). Olasılık ortalamasında daha emin konuşan model
   kazandığı için, ortalamadan önce her modeli validation setinde temperature
