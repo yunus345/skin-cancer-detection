@@ -63,11 +63,45 @@ def score(targets, predictions, mel_idx):
     }
 
 
+def weight_study(probs, targets, mel_idx, n_bootstrap=1000, seed=0):
+    """Kalibre 4'lu ensemble'a gore: her modeli cikarinca ve B0'in agirligini degistirince ne oluyor?
+
+    Bilerek az secenek deneniyor (kazananin laneti); her fark bootstrap ile olculuyor.
+    """
+    names = list(probs)
+    reference = {name: 1.0 for name in names}
+    options = [(f'{name} cikarilinca', {**reference, name: 0.0}) for name in names]
+    options += [(f'B0 agirligi {w}', {**reference, 'B0': w}) for w in (0.25, 0.5, 1.5)]
+
+    def predict(weights):
+        total = sum(weights.values())
+        return (sum(weights[n] * probs[n] for n in names) / total).argmax(axis=1)
+
+    rng = np.random.default_rng(seed)
+    samples = [rng.integers(0, len(targets), len(targets)) for _ in range(n_bootstrap)]
+    ref_pred = predict(reference)
+    ref_f1 = np.array([f1_score(targets[i], ref_pred[i], average='macro') for i in samples])
+    ref_score = score(targets, ref_pred, mel_idx)
+    print(f'Referans: 4 model esit agirlik, F1={ref_score["macro_f1"]:.3f} melR={ref_score["mel_recall"]:.3f}\n')
+    print(f'{"Secenek":22} {"F1":>6} {"fark":>7} {"%95 aralik":>17} {"referansi gecme":>16} {"melR":>6}')
+    for label, weights in options:
+        pred = predict(weights)
+        s = score(targets, pred, mel_idx)
+        diff = np.array([f1_score(targets[i], pred[i], average='macro') for i in samples]) - ref_f1
+        low, high = np.percentile(diff, [2.5, 97.5])
+        print(f'{label:22} {s["macro_f1"]:6.3f} {s["macro_f1"] - ref_score["macro_f1"]:+7.3f} '
+              f'({low:+.3f}, {high:+.3f}) {(diff > 0).mean() * 100:15.0f}% {s["mel_recall"]:6.3f}')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Ensemble kombinasyonlarini validation setinde karsilastir.')
     parser.add_argument('--calibrate', action='store_true',
                         help='Ortalamadan once her modeli validation setinde temperature scaling ile kalibre et')
+    parser.add_argument('--weight-study', action='store_true',
+                        help='Kalibre 4lu ensemble uzerinde model cikarma ve B0 agirligi karsilastirmasi')
     args = parser.parse_args()
+    if args.weight_study:
+        args.calibrate = True
 
     logits, targets, labels = load_split('val')
     mel_idx = labels.index('mel')
@@ -79,6 +113,9 @@ def main():
             print(f'{name:10} {temperatures[name]:5.2f} {nll(l, targets):9.3f} {nll(l, targets, temperatures[name]):10.3f}')
         print()
     probs = {name: softmax(l / temperatures[name]) for name, l in logits.items()}
+    if args.weight_study:
+        weight_study(probs, targets, mel_idx)
+        return
 
     rows = []
     names = list(MODELS)
