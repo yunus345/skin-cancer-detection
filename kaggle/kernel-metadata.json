@@ -1,0 +1,16 @@
+{
+  "id": "yunusemreozkan/skin-cancer-train",
+  "title": "skin-cancer-train",
+  "code_file": "skin-cancer-train.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [
+    "kmader/skin-cancer-mnist-ham10000"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}
