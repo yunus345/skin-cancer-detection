@@ -14,7 +14,9 @@ bkz. CLAUDE.md.
 | `baseline_v1` (EfficientNet-B0, 224px) | 0.698 | 0.762 | 0.626 | ağırlık git'te, `git checkout baseline-v1` |
 | `convnext_tiny_v1` (224px) | **0.774** | **0.798** | **0.766** | en iyi tek model |
 | `efficientnet_v2_s_v1` (384px) | 0.753 | 0.781 | 0.710 | ConvNeXt'ten farklı yerlerde hata yapıyor |
-| `swin_v2_t_v1` (256px, Kaggle) | 0.755 | **0.813** | 0.626 | nadir sınıflarda en iyi, melanomda zayıf |
+| `swin_v2_t_v1` (256px, Kaggle) | 0.755 | 0.813 | 0.626 | nadir sınıflarda en iyi, melanomda zayıf |
+| **`ensemble_v1`, normal karar** | **0.783** | 0.809 | 0.692 | 4 model, kalibre, eşit ağırlık |
+| **`ensemble_v1`, tarama (mel eşiği 0.30)** | 0.781 | **0.823** | **0.888** | kaçan melanom 5, yanlış alarm 119 |
 
 Her klasörde README (ayrıntılı sonuçlar, güven aralıkları, bulgular) var.
 Ağırlıklar: `baseline_v1` git'te; diğerleri (50MB+) yerel diskte + Drive'da
@@ -34,10 +36,11 @@ dk); Colab'da benzer modeller ~5 dk/epoch sürüyordu, Colab'ın 2 CPU'su veri
 yüklemede darboğaz olmuş olabilir. Colab notebook'u yedek olarak duruyor.
 
 ## Sıradaki adım (tek, somut)
-**Ensemble:** önce `ensemble.py`'ye validation seti desteği eklemek (model
-seçimi ve ağırlıklar validation'da seçilecek, test sadece en sonda bir kez).
-Sonra ConvNeXt + V2-S + Swin (+ B0?) düz ortalama → ağırlıklı ortalama /
-kalibrasyon. Bu aşama eğitim istemiyor, Mac'te yapılabilir.
+**Ensemble tamamlandı (2026-10-13), `baselines/ensemble_v1/`.** Tarif validation'da
+seçildi, test setinde bir kez ölçüldü (README'de ayrıntı). Sıradaki karar: Aşama B'ye
+(TTA → hedefli yeniden eğitim, ör. ConvNeXt @384) geçmek mi, yoksa ek veri / dış
+doğrulama tarafına mı yönelmek. Yeni bir model eklenirse: `cache_predictions.py` →
+`ensemble_val.py` (yeni tarif validation'da) → `ensemble_test.py` (ensemble_v2).
 
 Kaggle döngüsü (yeni bir model eğitmek gerekirse):
 1. [kaggle/skin-cancer-train.ipynb](kaggle/skin-cancer-train.ipynb) ilk hücresinde
