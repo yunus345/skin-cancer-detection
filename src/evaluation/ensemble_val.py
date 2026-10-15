@@ -41,8 +41,10 @@ def fit_temperature(logits, targets):
     return float(candidates[int(np.argmin(losses))])
 
 
-def load_split(split: str):
-    data = {name: np.load(path) for name, path in MODELS.items()}
+def load_split(split: str, tta: bool = False):
+    # tta=True: cache_predictions.py --tta ciktisi (4 cevirme bakisinin logit ortalamasi).
+    data = {name: np.load(path.replace('predictions.npz', 'predictions_tta.npz') if tta else path)
+            for name, path in MODELS.items()}
     reference = next(iter(data.values()))
     for name, d in data.items():
         if not (d[f'{split}_image_ids'] == reference[f'{split}_image_ids']).all():
@@ -109,6 +111,33 @@ def mel_threshold_table(probs, targets, labels):
               f'{said_mel.sum():11d} {(said_mel & ~is_mel).sum():13d}')
 
 
+def tta_study(n_bootstrap=1000, seed=0):
+    """Kalibre 4'lu ensemble ve tek modeller: TTA'li ve TTA'siz (validation, bootstrap)."""
+    logits, targets, labels = load_split('val')
+    tta_logits, tta_targets, _ = load_split('val', tta=True)
+    assert (targets == tta_targets).all()
+
+    def calibrated(l):
+        # Her durum kendi T'sini validation'da bulur (TTA olasiliklari biraz yumusatir).
+        return {name: softmax(x / fit_temperature(x, targets)) for name, x in l.items()}
+
+    plain, with_tta = calibrated(logits), calibrated(tta_logits)
+    rng = np.random.default_rng(seed)
+    samples = [rng.integers(0, len(targets), len(targets)) for _ in range(n_bootstrap)]
+    mel_idx = labels.index('mel')
+    print(f'{"(validation)":24} {"F1 TTAsiz":>10} {"F1 TTAli":>9} {"fark":>7} {"%95 aralik":>17} {"TTA daha iyi":>13} {"melR":>12}')
+    rows = [(name, [name]) for name in plain] + [('Ensemble (4 model)', list(plain))]
+    for label, names in rows:
+        p0 = np.mean([plain[n] for n in names], axis=0).argmax(axis=1)
+        p1 = np.mean([with_tta[n] for n in names], axis=0).argmax(axis=1)
+        s0, s1 = score(targets, p0, mel_idx), score(targets, p1, mel_idx)
+        diff = np.array([f1_score(targets[i], p1[i], average='macro') - f1_score(targets[i], p0[i], average='macro')
+                         for i in samples])
+        low, high = np.percentile(diff, [2.5, 97.5])
+        print(f'{label:24} {s0["macro_f1"]:10.3f} {s1["macro_f1"]:9.3f} {s1["macro_f1"] - s0["macro_f1"]:+7.3f} '
+              f'({low:+.3f}, {high:+.3f}) {(diff > 0).mean() * 100:12.0f}% {s0["mel_recall"]:.3f}->{s1["mel_recall"]:.3f}')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Ensemble kombinasyonlarini validation setinde karsilastir.')
     parser.add_argument('--calibrate', action='store_true',
@@ -117,7 +146,12 @@ def main():
                         help='Kalibre 4lu ensemble uzerinde model cikarma ve B0 agirligi karsilastirmasi')
     parser.add_argument('--mel-threshold-table', action='store_true',
                         help='Kalibre 4lu ensemble icin melanom esigi denge tablosu')
+    parser.add_argument('--tta-study', action='store_true',
+                        help='TTAli ve TTAsiz sonuclari karsilastir (once cache_predictions.py --tta)')
     args = parser.parse_args()
+    if args.tta_study:
+        tta_study()
+        return
     if args.weight_study or args.mel_threshold_table:
         args.calibrate = True
 

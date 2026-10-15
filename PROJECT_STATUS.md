@@ -41,8 +41,11 @@ yüklemede darboğaz olmuş olabilir. Colab notebook'u yedek olarak duruyor.
 (`baselines/convnext_tiny_aug_v2/`).
 
 **Yol haritası (2026-10-15, kullanıcıyla kararlaştırıldı, sırayla):**
-1. **TTA** (eğitim yok, Mac): her görüntüyü çevirip tahminleri ortalamak. ← sıradaki
-2. **Metadata füzyonu** (yaş, cinsiyet, lezyon yeri; eğitim yok, küçük ek model).
+1. ~~TTA~~ (2026-10-15, **kabul edilmedi**): 4 çevirme bakışı. Tek modellere küçük katkı
+   (ConvNeXt +0.008), ama kalibre 4'lü ensemble'da validation F1 0.768 → 0.757 (bootstrap'te
+   %94 daha kötü). Ensemble zaten ortalama aldığı için TTA'nın katkısı üst üste binmiyor.
+   `cache_predictions.py --tta`, `ensemble_val.py --tta-study`.
+2. **Metadata füzyonu** (yaş, cinsiyet, lezyon yeri; eğitim yok, küçük ek model). ← sıradaki
 3. **ConvNeXt @384px** (Kaggle, ~1.5 saat).
 4. **Dış test setini belirle ve kenara ayır** (ISIC 2018 resmi test; erişimi kontrol et).
 5. **Ek veri** (ISIC 2019; 4'teki setle çakışanlar temizlenmeli).
