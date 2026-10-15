@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 import albumentations as A
+import cv2
 import numpy as np
 import torch
 from albumentations.pytorch import ToTensorV2
@@ -60,13 +61,34 @@ def gray_world_color_constancy(image, **kwargs):
     return np.clip(corrected, 0, 255).astype(np.uint8)
 
 
-def build_transforms(image_size: int, train: bool = False):
+def build_transforms(image_size: int, train: bool = False, augmentation: str = 'v1'):
     # Color constancy: rastgele bir augmentation degil, her zaman uygulanan bir normalizasyon
     # adimi - hem train hem val/test'te aynen calisir, p=1.0.
     color_constancy = A.Lambda(image=gray_world_color_constancy, p=1.0)
 
-    if train:
-        # RandomResizedCrop + CoarseDropout (cutout), ColorJitter'dan daha gercekci/agresif
+    if train and augmentation == 'v2':
+        # v2 (2026-10-15): v1'in iki zayif noktasini kapatiyor.
+        # 1) Once val/test ile ayni sekilde kareye sikistir, sonra kirp: 600x450 goruntude v1'in
+        #    RandomResizedCrop'u ~%90 ihtimalle ayni sabit orta kesime dusuyordu ve egitimde goruntu
+        #    val/test'tekinden farkli oranda sikisiyordu. Kare goruntuden %80-100 alan kesmek her
+        #    zaman mumkun, yani kirpma gercekten rastgele.
+        # 2) Dermoskopide "yukari" yonu yok: tam tur dondurme. Kose bosluklari siyah (cogu
+        #    goruntude koseler zaten koyu); ayna yansitma lezyonu kopyalayip sahte desen uretirdi.
+        compose = A.Compose([
+            color_constancy,
+            A.Resize(image_size, image_size),
+            A.RandomResizedCrop(size=(image_size, image_size), scale=(0.8, 1.0), ratio=(0.9, 1.1)),
+            A.HorizontalFlip(p=0.5),
+            A.VerticalFlip(p=0.5),
+            A.Rotate(limit=180, border_mode=cv2.BORDER_CONSTANT, fill=0, p=1.0),
+            A.RandomBrightnessContrast(brightness_limit=0.15, contrast_limit=0.15, p=0.5),
+            A.HueSaturationValue(hue_shift_limit=10, sat_shift_limit=15, val_shift_limit=10, p=0.3),
+            A.CoarseDropout(num_holes_range=(1, 4), hole_height_range=(0.05, 0.15), hole_width_range=(0.05, 0.15), p=0.3),
+            A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+            ToTensorV2(),
+        ])
+    elif train:
+        # v1 - RandomResizedCrop + CoarseDropout (cutout), ColorJitter'dan daha gercekci/agresif
         # augmentation - modelin lezyonun tamamina degil, parcalarina da odaklanmasini zorlar.
         compose = A.Compose([
             color_constancy,
@@ -239,6 +261,7 @@ def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader,
                 'labels': state['labels'],
                 'architecture': state['architecture'],
                 'image_size': state['image_size'],
+                'augmentation': state['augmentation'],
                 'metrics': metrics,
             }, out_dir / 'best_model.pt')
             state['epochs_without_improvement'] = 0
@@ -267,6 +290,7 @@ def train_model(
     focal_gamma: float = 2.0,
     architecture: str = 'efficientnet_b0',
     num_workers: int = 2,
+    augmentation: str = 'v1',
 ):
     torch.manual_seed(seed)
     device = select_device(device_arg)
@@ -277,9 +301,9 @@ def train_model(
     torch.backends.cudnn.benchmark = on_cuda
     scaler = torch.amp.GradScaler('cuda', enabled=on_cuda)
     print(f'Mixed precision (AMP): {"on" if on_cuda else "off"}, num_workers={num_workers}')
-    print(f'Architecture: {architecture}, image size: {image_size}px')
+    print(f'Architecture: {architecture}, image size: {image_size}px, augmentation: {augmentation}')
 
-    train_dataset = SkinCancerDataset(manifest_path, split='train', transform=build_transforms(image_size, train=True))
+    train_dataset = SkinCancerDataset(manifest_path, split='train', transform=build_transforms(image_size, train=True, augmentation=augmentation))
     val_dataset = SkinCancerDataset(manifest_path, split='val', transform=build_transforms(image_size))
 
     if len(train_dataset) == 0 or len(val_dataset) == 0:
@@ -318,6 +342,7 @@ def train_model(
         'labels': train_dataset.labels,
         'architecture': architecture,
         'image_size': image_size,
+        'augmentation': augmentation,
         'history': [],
     }
 
@@ -356,6 +381,7 @@ def train_model(
         'labels': train_dataset.labels,
         'architecture': architecture,
         'image_size': image_size,
+        'augmentation': augmentation,
         'metrics': final_metrics,
     }, checkpoint_path)
 
@@ -390,6 +416,8 @@ def main():
     parser.add_argument('--loss-fn', choices=['ce', 'focal'], default='ce', help='Loss fonksiyonu: ce (class-weighted CrossEntropy) veya focal')
     parser.add_argument('--focal-gamma', type=float, default=2.0, help='Focal loss gamma parametresi (sadece --loss-fn focal ile)')
     parser.add_argument('--architecture', choices=list(NATIVE_IMAGE_SIZE), default='efficientnet_b0', help='Backbone mimarisi')
+    parser.add_argument('--augmentation', choices=['v1', 'v2'], default='v1',
+                        help='Egitim augmentation tarifi: v1 (ilk dort model) ya da v2 (kare-sonra-kirp + tam tur dondurme)')
     parser.add_argument('--num-workers', type=int, default=2, help='Veriyi arka planda hazirlayan yardimci surec sayisi (0 = ana surecte, sirayla)')
     args = parser.parse_args()
 
@@ -413,6 +441,7 @@ def main():
         focal_gamma=args.focal_gamma,
         architecture=args.architecture,
         num_workers=args.num_workers,
+        augmentation=args.augmentation,
     )
 
 
