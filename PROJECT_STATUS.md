@@ -45,8 +45,13 @@ yüklemede darboğaz olmuş olabilir. Colab notebook'u yedek olarak duruyor.
    (ConvNeXt +0.008), ama kalibre 4'lü ensemble'da validation F1 0.768 → 0.757 (bootstrap'te
    %94 daha kötü). Ensemble zaten ortalama aldığı için TTA'nın katkısı üst üste binmiyor.
    `cache_predictions.py --tta`, `ensemble_val.py --tta-study`.
-2. **Metadata füzyonu** (yaş, cinsiyet, lezyon yeri; eğitim yok, küçük ek model). ← sıradaki
-3. **ConvNeXt @384px** (Kaggle, ~1.5 saat).
+2. ~~Metadata füzyonu~~ (2026-10-15, **kabul edilmedi**): eğitim setinde yaş/cinsiyet/yer
+   lojistik regresyonu, ensemble ile log-olasılık toplamı (`metadata_fusion.py`). Metadata tek
+   başına bilgi taşıyor (val log loss 0.908, bilgisiz tahmin 1.112) ama ensemble'a ekleyince
+   hiçbir alfa F1'i artırmadı (alfa ≥ 0.75'te belirgin düşüş). Muhtemel sebep: görüntü modelleri
+   yaş/yer ipuçlarını görüntüden zaten alıyor, metadata aynı bilgiyi ikinci kez sayıyor.
+   Uyarılar: `dx_type` leakage (teşhis yöntemi = cevap); "trunk" etiketi kaynak izi taşıyor.
+3. **ConvNeXt @384px** (Kaggle, ~1.5 saat). ← sıradaki
 4. **Dış test setini belirle ve kenara ayır** (ISIC 2018 resmi test; erişimi kontrol et).
 5. **Ek veri** (ISIC 2019; 4'teki setle çakışanlar temizlenmeli).
 6. **Dış doğrulama** (her şey kesinleşince, bir kez).
