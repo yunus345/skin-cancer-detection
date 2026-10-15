@@ -36,11 +36,21 @@ dk); Colab'da benzer modeller ~5 dk/epoch sürüyordu, Colab'ın 2 CPU'su veri
 yüklemede darboğaz olmuş olabilir. Colab notebook'u yedek olarak duruyor.
 
 ## Sıradaki adım (tek, somut)
-**Ensemble tamamlandı (2026-10-13), `baselines/ensemble_v1/`.** Tarif validation'da
-seçildi, test setinde bir kez ölçüldü (README'de ayrıntı). Sıradaki karar: Aşama B'ye
-(TTA → hedefli yeniden eğitim, ör. ConvNeXt @384) geçmek mi, yoksa ek veri / dış
-doğrulama tarafına mı yönelmek. Yeni bir model eklenirse: `cache_predictions.py` →
-`ensemble_val.py` (yeni tarif validation'da) → `ensemble_test.py` (ensemble_v2).
+**Ensemble tamamlandı (2026-10-13), `baselines/ensemble_v1/`.** Augmentation v2
+(kare-sonra-kırp + ±180°) ConvNeXt'te denendi, iyileşme yok, v1'de kalındı
+(`baselines/convnext_tiny_aug_v2/`).
+
+**Yol haritası (2026-10-15, kullanıcıyla kararlaştırıldı, sırayla):**
+1. **TTA** (eğitim yok, Mac): her görüntüyü çevirip tahminleri ortalamak. ← sıradaki
+2. **Metadata füzyonu** (yaş, cinsiyet, lezyon yeri; eğitim yok, küçük ek model).
+3. **ConvNeXt @384px** (Kaggle, ~1.5 saat).
+4. **Dış test setini belirle ve kenara ayır** (ISIC 2018 resmi test; erişimi kontrol et).
+5. **Ek veri** (ISIC 2019; 4'teki setle çakışanlar temizlenmeli).
+6. **Dış doğrulama** (her şey kesinleşince, bir kez).
+7. **Arayüz** (doktor fotoğraf yükler, sonuç alır).
+
+Her yeni tarif validation'da seçilir, test setinde bir kez ölçülür. Yeni bir model
+eklenirse: `cache_predictions.py` → `ensemble_val.py` → `ensemble_test.py`.
 
 Kaggle döngüsü (yeni bir model eğitmek gerekirse):
 1. [kaggle/skin-cancer-train.ipynb](kaggle/skin-cancer-train.ipynb) ilk hücresinde
