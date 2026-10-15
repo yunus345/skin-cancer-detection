@@ -15,6 +15,7 @@ bkz. CLAUDE.md.
 | `convnext_tiny_v1` (224px) | **0.774** | **0.798** | **0.766** | en iyi tek model |
 | `efficientnet_v2_s_v1` (384px) | 0.753 | 0.781 | 0.710 | ConvNeXt'ten farklı yerlerde hata yapıyor |
 | `swin_v2_t_v1` (256px, Kaggle) | 0.755 | 0.813 | 0.626 | nadir sınıflarda en iyi, melanomda zayıf |
+| `convnext_tiny_384_v1` (384px, Kaggle) | 0.771 | 0.784 | 0.664 | val'de çok iyi, testte 224 ile aynı |
 | **`ensemble_v1`, normal karar** | **0.783** | 0.809 | 0.692 | 4 model, kalibre, eşit ağırlık |
 | **`ensemble_v1`, tarama (mel eşiği 0.30)** | 0.781 | **0.823** | **0.888** | kaçan melanom 5, yanlış alarm 119 |
 
@@ -51,8 +52,11 @@ yüklemede darboğaz olmuş olabilir. Colab notebook'u yedek olarak duruyor.
    hiçbir alfa F1'i artırmadı (alfa ≥ 0.75'te belirgin düşüş). Muhtemel sebep: görüntü modelleri
    yaş/yer ipuçlarını görüntüden zaten alıyor, metadata aynı bilgiyi ikinci kez sayıyor.
    Uyarılar: `dx_type` leakage (teşhis yöntemi = cevap); "trunk" etiketi kaynak izi taşıyor.
-3. **ConvNeXt @384px** (Kaggle, ~1.5 saat). ← sıradaki
-4. **Dış test setini belirle ve kenara ayır** (ISIC 2018 resmi test; erişimi kontrol et).
+3. ~~ConvNeXt @384px~~ (2026-10-15, `baselines/convnext_tiny_384_v1/`): tek model olarak
+   validation'da büyük sıçrama (F1 0.744 → 0.769), ama ensemble'a girince gürültüyü aşan bir
+   kazanç yok, **ensemble_v1 değişmedi**. Testte tek model F1 0.771 (224: 0.774): validation'daki
+   sıçrama tekrarlanmadı.
+4. **Dış test setini belirle ve kenara ayır** (ISIC 2018 resmi test; erişimi kontrol et). ← sıradaki
 5. **Ek veri** (ISIC 2019; 4'teki setle çakışanlar temizlenmeli).
 6. **Dış doğrulama** (her şey kesinleşince, bir kez).
 7. **Arayüz** (doktor fotoğraf yükler, sonuç alır).

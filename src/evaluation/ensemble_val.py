@@ -21,6 +21,12 @@ MODELS = {
 }
 
 
+# Mevcut ensemble'a aday yeni modeller (MODELS'e ancak validation karsilastirmasini gecerse girer).
+CANDIDATES = {
+    'ConvNeXt384': 'baselines/convnext_tiny_384_v1/predictions.npz',
+}
+
+
 def softmax(logits):
     shifted = logits - logits.max(axis=1, keepdims=True)
     exp = np.exp(shifted)
@@ -41,10 +47,10 @@ def fit_temperature(logits, targets):
     return float(candidates[int(np.argmin(losses))])
 
 
-def load_split(split: str, tta: bool = False):
+def load_split(split: str, tta: bool = False, models: dict | None = None):
     # tta=True: cache_predictions.py --tta ciktisi (4 cevirme bakisinin logit ortalamasi).
     data = {name: np.load(path.replace('predictions.npz', 'predictions_tta.npz') if tta else path)
-            for name, path in MODELS.items()}
+            for name, path in (models or MODELS).items()}
     reference = next(iter(data.values()))
     for name, d in data.items():
         if not (d[f'{split}_image_ids'] == reference[f'{split}_image_ids']).all():
@@ -138,6 +144,32 @@ def tta_study(n_bootstrap=1000, seed=0):
               f'({low:+.3f}, {high:+.3f}) {(diff > 0).mean() * 100:12.0f}% {s0["mel_recall"]:.3f}->{s1["mel_recall"]:.3f}')
 
 
+def candidate_study(n_bootstrap=1000, seed=0):
+    """Aday model mevcut kalibre 4'lu ensemble'a ne katiyor? Secenekler oneden belirlendi:
+    ayni mimarinin eski uyesinin yerine gecmek ya da yeni uye olarak eklenmek."""
+    logits, targets, labels = load_split('val', models={**MODELS, **CANDIDATES})
+    probs = {name: softmax(l / fit_temperature(l, targets)) for name, l in logits.items()}
+    options = {
+        'Mevcut (4 model)': list(MODELS),
+        '384, ConvNeXt yerine': ['B0', 'ConvNeXt384', 'V2-S', 'Swin'],
+        '384, 5. uye olarak': list(MODELS) + ['ConvNeXt384'],
+    }
+    mel_idx = labels.index('mel')
+    rng = np.random.default_rng(seed)
+    samples = [rng.integers(0, len(targets), len(targets)) for _ in range(n_bootstrap)]
+    preds = {k: np.mean([probs[n] for n in v], axis=0).argmax(axis=1) for k, v in options.items()}
+    ref_f1 = np.array([f1_score(targets[i], preds['Mevcut (4 model)'][i], average='macro') for i in samples])
+    print(f'{"(validation, kalibre)":24} {"F1":>6} {"fark":>7} {"%95 aralik":>17} {"mevcudu gecme":>14} {"BAcc":>6} {"melR":>6} {"melP":>6}')
+    for label, pred in preds.items():
+        s = score(targets, pred, mel_idx)
+        diff = np.array([f1_score(targets[i], pred[i], average='macro') for i in samples]) - ref_f1
+        low, high = np.percentile(diff, [2.5, 97.5])
+        print(f'{label:24} {s["macro_f1"]:6.3f} {diff.mean():+7.3f} ({low:+.3f}, {high:+.3f}) '
+              f'{(diff > 0).mean() * 100:13.0f}% {s["balanced_accuracy"]:6.3f} {s["mel_recall"]:6.3f} {s["mel_precision"]:6.3f}')
+    single = score(targets, probs['ConvNeXt384'].argmax(axis=1), mel_idx)
+    print(f'\nTek model ConvNeXt384: F1={single["macro_f1"]:.3f} melR={single["mel_recall"]:.3f}')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Ensemble kombinasyonlarini validation setinde karsilastir.')
     parser.add_argument('--calibrate', action='store_true',
@@ -148,7 +180,12 @@ def main():
                         help='Kalibre 4lu ensemble icin melanom esigi denge tablosu')
     parser.add_argument('--tta-study', action='store_true',
                         help='TTAli ve TTAsiz sonuclari karsilastir (once cache_predictions.py --tta)')
+    parser.add_argument('--candidate-study', action='store_true',
+                        help='CANDIDATES modellerinin mevcut ensemble a katkisi')
     args = parser.parse_args()
+    if args.candidate_study:
+        candidate_study()
+        return
     if args.tta_study:
         tta_study()
         return
