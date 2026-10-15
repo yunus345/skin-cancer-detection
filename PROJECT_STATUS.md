@@ -82,8 +82,7 @@ mimariyi yeniden eğit.
 Dikkat: ensemble ağırlıkları ve hangi modellerin dahil edileceği
 **validation** setinde seçilmeli, test seti sadece en sonda bir kez
 kullanılmalı. Test setine bakarak seçim yaparsak sonuç iyimser çıkar
-(leakage). `ensemble.py` şu an sadece test setinde çalışıyor; ağırlık
-ayarı aşamasında validation desteği eklenecek.
+(leakage). Seçim `ensemble_val.py`'de (validation), tek ölçüm `ensemble_test.py`'de.
 
 ## Sonraya bırakılan konular (2026-10-11'de konuşuldu, karar verilmedi)
 - **Kıyas hedefi (ISIC 2018, balanced accuracy):** Ek veri kullanmayanların
