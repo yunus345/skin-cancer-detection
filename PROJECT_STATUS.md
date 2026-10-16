@@ -68,7 +68,10 @@ yüklemede darboğaz olmuş olabilir. Colab notebook'u yedek olarak duruyor.
 label smoothing 0.1. val_f1 0.657 (eski tarif 0.744). Sebep tarif değil, bir kod hatası: PyTorch'un
 CrossEntropyLoss(weight, label_smoothing) sınıf ağırlıklarını smoothing payına da uyguluyor; nv görüntüsünde
 df olasılığını artırmak loss'u düşürüyordu (model nadir sınıfları her yerde tahmin etti). Düzeltme:
-`WeightedLabelSmoothingCE` (ağırlık sadece gerçek sınıfa). Tarif düzeltilmiş kodla yeniden denenecek.
+`WeightedLabelSmoothingCE` (ağırlık sadece gerçek sınıfa). **Düzeltilmiş tarif (Version 6,
+`baselines/convnext_tiny_recipe2_v1/`): tek model val F1 0.744 → 0.766, kalibrasyon T 1.47 → 0.92,
+eğitim sonda oturuyor.** Ensemble'a eski ConvNeXt yerine girince 0.768 → 0.780 (gürültü eşiği altında).
+**Sıradaki karar (yeni oturumda planlanacak):** diğer modelleri de tarif v2 ile eğitmek / 5-fold CV.
 **Proje 2026-10-17'de `~/Projeler/skin-cancer-detection`'a taşındı** (Masaüstü iCloud'du, kota dolu,
 dosyalar okunamıyordu). Kaggle CLI: `~/.local/kaggle-cli/bin/kaggle`.
 

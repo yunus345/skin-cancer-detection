@@ -25,6 +25,7 @@ MODELS = {
 CANDIDATES = {
     'ConvNeXt384': 'baselines/convnext_tiny_384_v1/predictions.npz',
     'ConvNeXtISIC': 'baselines/convnext_tiny_isic2019_v1/predictions.npz',
+    'ConvNeXtTarif2': 'baselines/convnext_tiny_recipe2_v1/predictions.npz',
 }
 
 
