@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import time
 from pathlib import Path
 
@@ -291,6 +292,8 @@ def train_model(
     architecture: str = 'efficientnet_b0',
     num_workers: int = 2,
     augmentation: str = 'v1',
+    label_smoothing: float = 0.0,
+    warmup_epochs: int = 2,
 ):
     torch.manual_seed(seed)
     device = select_device(device_arg)
@@ -302,6 +305,7 @@ def train_model(
     scaler = torch.amp.GradScaler('cuda', enabled=on_cuda)
     print(f'Mixed precision (AMP): {"on" if on_cuda else "off"}, num_workers={num_workers}')
     print(f'Architecture: {architecture}, image size: {image_size}px, augmentation: {augmentation}')
+    print(f'Recipe: lr={learning_rate:.0e}/{finetune_lr:.0e}, scheduler={scheduler_name} (warmup {warmup_epochs}), label_smoothing={label_smoothing}, patience={patience}')
 
     train_dataset = SkinCancerDataset(manifest_path, split='train', transform=build_transforms(image_size, train=True, augmentation=augmentation))
     val_dataset = SkinCancerDataset(manifest_path, split='val', transform=build_transforms(image_size))
@@ -318,7 +322,10 @@ def train_model(
     if loss_fn == 'focal':
         criterion = FocalLoss(weight=class_weights.to(device), gamma=focal_gamma)
     else:
-        criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
+        # label_smoothing > 0: hedef "%100 bu sinif" yerine ornegin "%90 bu sinif, kalan %10 digerlerine
+        # esit". Modelin asiri emin olmasini engeller (val_loss'un yukselmesi / T=1.47 sorunu).
+        # Not: loss degeri artik label_smoothing=0 kosularinin loss'uyla karsilastirilamaz.
+        criterion = nn.CrossEntropyLoss(weight=class_weights.to(device), label_smoothing=label_smoothing)
 
     loader_kwargs = dict(
         batch_size=batch_size,
@@ -346,17 +353,27 @@ def train_model(
         'history': [],
     }
 
-    def build_scheduler(optimizer, phase_epochs):
+    def build_scheduler(optimizer, phase_epochs, phase_name):
         if scheduler_name == 'cosine':
             # LR, fazin basindaki degerden fazin son epoch'una kadar yumusakca 0'a yaklasir.
             return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=phase_epochs)
+        if scheduler_name == 'warmup_cosine' and phase_name == 'finetune':
+            # Backbone yeni acildiginda buyuk LR, ImageNet bilgisini bir anda bozabilir: once birkac epoch
+            # LR'yi kademeli yukselt (warmup), sonra kalan epoch'larda cosine ile sifira yaklastir.
+            # Faz 1 (sadece son katman) sabit LR ile kaliyor.
+            def factor(epoch):
+                if epoch < warmup_epochs:
+                    return (epoch + 1) / (warmup_epochs + 1)
+                progress = (epoch - warmup_epochs) / max(1, phase_epochs - warmup_epochs)
+                return 0.5 * (1 + math.cos(math.pi * progress))
+            return torch.optim.lr_scheduler.LambdaLR(optimizer, factor)
         return None
 
     # Faz 1 - feature extraction: backbone donuk, sadece yeni classifier katmani egitiliyor.
     set_backbone_trainable(model, trainable=False)
     print(f'Phase 1 (feature_extract): {count_trainable_params(model):,} trainable params')
     optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
-    scheduler = build_scheduler(optimizer, feature_extract_epochs)
+    scheduler = build_scheduler(optimizer, feature_extract_epochs, 'feature_extract')
     stopped_early = run_phase(
         model, 'feature_extract', feature_extract_epochs, optimizer, scheduler,
         train_loader, val_loader, criterion, device, out_dir, state, scaler,
@@ -368,7 +385,7 @@ def train_model(
         print(f'Phase 2 (finetune): {count_trainable_params(model):,} trainable params')
         state['epochs_without_improvement'] = 0  # unfreeze loss landscape'i degistirir, patience sayaci sifirlanir
         optimizer = torch.optim.AdamW(model.parameters(), lr=finetune_lr)
-        scheduler = build_scheduler(optimizer, finetune_epochs)
+        scheduler = build_scheduler(optimizer, finetune_epochs, 'finetune')
         run_phase(
             model, 'finetune', finetune_epochs, optimizer, scheduler,
             train_loader, val_loader, criterion, device, out_dir, state, scaler,
@@ -411,7 +428,10 @@ def main():
     parser.add_argument('--image-size', type=int, default=None, help='Giris boyutu (varsayilan: mimarinin on-egitim boyutu)')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
     parser.add_argument('--device', choices=['auto', 'cpu', 'cuda', 'mps'], default='auto', help='Compute device; auto picks MPS > CUDA > CPU')
-    parser.add_argument('--scheduler', choices=['none', 'cosine'], default='none', help='LR scheduler per phase (none = sabit LR)')
+    parser.add_argument('--scheduler', choices=['none', 'cosine', 'warmup_cosine'], default='none',
+                        help='LR scheduler: none (sabit), cosine (her faz), warmup_cosine (sadece finetune: warmup + cosine)')
+    parser.add_argument('--warmup-epochs', type=int, default=2, help='warmup_cosine icin finetune basindaki warmup epoch sayisi')
+    parser.add_argument('--label-smoothing', type=float, default=0.0, help='CrossEntropy label smoothing (0 = kapali)')
     parser.add_argument('--patience', type=int, default=3, help='Early stopping patience (val_f1 iyilesmeyen epoch sayisi)')
     parser.add_argument('--loss-fn', choices=['ce', 'focal'], default='ce', help='Loss fonksiyonu: ce (class-weighted CrossEntropy) veya focal')
     parser.add_argument('--focal-gamma', type=float, default=2.0, help='Focal loss gamma parametresi (sadece --loss-fn focal ile)')
@@ -442,6 +462,8 @@ def main():
         architecture=args.architecture,
         num_workers=args.num_workers,
         augmentation=args.augmentation,
+        label_smoothing=args.label_smoothing,
+        warmup_epochs=args.warmup_epochs,
     )
 
 
