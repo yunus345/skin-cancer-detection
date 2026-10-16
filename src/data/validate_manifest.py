@@ -8,6 +8,8 @@ from pathlib import Path
 import pandas as pd
 from PIL import Image
 
+from src.data.external_test import load_external_test_ids
+
 
 def validate_manifest(manifest_path: str, check_images: bool = True) -> bool:
     manifest_file = Path(manifest_path)
@@ -39,6 +41,12 @@ def validate_manifest(manifest_path: str, check_images: bool = True) -> bool:
         errors.append(f'{int(df["label"].astype(str).str.strip().eq("").sum())} rows have empty labels')
     if not set(df['split']).issubset({'train', 'val', 'test'}):
         errors.append('split contains values other than train, val or test')
+
+    if 'image_id' in df.columns:
+        # Dis test seti (external_test/) hicbir split'e giremez; ek veri eklerken asil risk burada.
+        external = load_external_test_ids() & set(df['image_id'].astype(str).str.strip())
+        if external:
+            errors.append(f'{len(external)} images belong to the external test set (external_test/) - remove them')
 
     if 'lesion_id' in df.columns:
         split_counts = df.groupby('lesion_id')['split'].nunique()
