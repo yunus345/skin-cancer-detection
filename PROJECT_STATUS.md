@@ -64,7 +64,12 @@ yüklemede darboğaz olmuş olabilir. Colab notebook'u yedek olarak duruyor.
    ensemble'a katkı yok; testte daha kötü (F1 0.744, 224'ün 0.774'ü), melanom ve akiec recall
    düştü (model "nv"ye kaydı; akiec'in anlamı değişti; farklı hastane). Kullanıcı kararıyla ek
    veri hattı şimdilik durduruldu; README'de ileride denenebilecek düzeltmeler var.
-6. **Dış doğrulama** (her şey kesinleşince, bir kez). ← sıradaki: ensemble_v1 ile
+6. ~~Dış doğrulama~~ (2026-10-16, ilk ölçüm, `baselines/ensemble_v1/external_isic2018_test/`):
+   ensemble_v1, ISIC 2018 resmi test seti (1512). macro_f1 0.749, balanced_accuracy 0.765
+   (kendi testimizde 0.809: ~4.5 puan iyimsermiş), mel_recall 0.749; tarama modu mel_recall 0.842.
+   Ensemble en iyi tek modelden +0.02 F1. Yarışmanın ek verisiz en iyisi 0.845: fark ~8 puan.
+   Bu sete artık bakıldı: yeni tarifler yine validation'da seçilir, burada sadece bir kez ölçülür
+   ve "daha önce bakılmış set" diye raporlanır.
 7. **Arayüz** (doktor fotoğraf yükler, sonuç alır).
 
 Her yeni tarif validation'da seçilir, test setinde bir kez ölçülür. Yeni bir model

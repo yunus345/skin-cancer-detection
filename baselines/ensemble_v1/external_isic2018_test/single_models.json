@@ -1,0 +1,30 @@
+{
+  "B0": {
+    "macro_f1": 0.6508843606207695,
+    "balanced_accuracy": 0.6969149274996571,
+    "macro_precision": 0.6257826640653914,
+    "mel_recall": 0.6608187134502924,
+    "mel_precision": 0.386986301369863
+  },
+  "ConvNeXt": {
+    "macro_f1": 0.7240142224911269,
+    "balanced_accuracy": 0.7312478498948384,
+    "macro_precision": 0.738206278967568,
+    "mel_recall": 0.7777777777777778,
+    "mel_precision": 0.42356687898089174
+  },
+  "V2-S": {
+    "macro_f1": 0.7189101254001871,
+    "balanced_accuracy": 0.7336835957042691,
+    "macro_precision": 0.710856607908202,
+    "mel_recall": 0.6783625730994152,
+    "mel_precision": 0.5420560747663551
+  },
+  "Swin": {
+    "macro_f1": 0.7277736948003353,
+    "balanced_accuracy": 0.7599071291527347,
+    "macro_precision": 0.7149318968713556,
+    "mel_recall": 0.6783625730994152,
+    "mel_precision": 0.5021645021645021
+  }
+}
