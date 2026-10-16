@@ -24,6 +24,7 @@ MODELS = {
 # Mevcut ensemble'a aday yeni modeller (MODELS'e ancak validation karsilastirmasini gecerse girer).
 CANDIDATES = {
     'ConvNeXt384': 'baselines/convnext_tiny_384_v1/predictions.npz',
+    'ConvNeXtISIC': 'baselines/convnext_tiny_isic2019_v1/predictions.npz',
 }
 
 
@@ -149,25 +150,23 @@ def candidate_study(n_bootstrap=1000, seed=0):
     ayni mimarinin eski uyesinin yerine gecmek ya da yeni uye olarak eklenmek."""
     logits, targets, labels = load_split('val', models={**MODELS, **CANDIDATES})
     probs = {name: softmax(l / fit_temperature(l, targets)) for name, l in logits.items()}
-    options = {
-        'Mevcut (4 model)': list(MODELS),
-        '384, ConvNeXt yerine': ['B0', 'ConvNeXt384', 'V2-S', 'Swin'],
-        '384, 5. uye olarak': list(MODELS) + ['ConvNeXt384'],
-    }
+    options = {'Mevcut (4 model)': list(MODELS)}
+    for candidate in CANDIDATES:
+        options[f'{candidate}, ConvNeXt yerine'] = [candidate if n == 'ConvNeXt' else n for n in MODELS]
+        options[f'{candidate}, 5. uye'] = list(MODELS) + [candidate]
+        options[f'{candidate} tek basina'] = [candidate]
     mel_idx = labels.index('mel')
     rng = np.random.default_rng(seed)
     samples = [rng.integers(0, len(targets), len(targets)) for _ in range(n_bootstrap)]
     preds = {k: np.mean([probs[n] for n in v], axis=0).argmax(axis=1) for k, v in options.items()}
     ref_f1 = np.array([f1_score(targets[i], preds['Mevcut (4 model)'][i], average='macro') for i in samples])
-    print(f'{"(validation, kalibre)":24} {"F1":>6} {"fark":>7} {"%95 aralik":>17} {"mevcudu gecme":>14} {"BAcc":>6} {"melR":>6} {"melP":>6}')
+    print(f'{"(validation, kalibre)":30} {"F1":>6} {"fark":>7} {"%95 aralik":>17} {"mevcudu gecme":>14} {"BAcc":>6} {"melR":>6} {"melP":>6}')
     for label, pred in preds.items():
         s = score(targets, pred, mel_idx)
         diff = np.array([f1_score(targets[i], pred[i], average='macro') for i in samples]) - ref_f1
         low, high = np.percentile(diff, [2.5, 97.5])
-        print(f'{label:24} {s["macro_f1"]:6.3f} {diff.mean():+7.3f} ({low:+.3f}, {high:+.3f}) '
+        print(f'{label:30} {s["macro_f1"]:6.3f} {diff.mean():+7.3f} ({low:+.3f}, {high:+.3f}) '
               f'{(diff > 0).mean() * 100:13.0f}% {s["balanced_accuracy"]:6.3f} {s["mel_recall"]:6.3f} {s["mel_precision"]:6.3f}')
-    single = score(targets, probs['ConvNeXt384'].argmax(axis=1), mel_idx)
-    print(f'\nTek model ConvNeXt384: F1={single["macro_f1"]:.3f} melR={single["mel_recall"]:.3f}')
 
 
 def main():

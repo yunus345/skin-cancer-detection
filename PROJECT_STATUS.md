@@ -16,6 +16,7 @@ bkz. CLAUDE.md.
 | `efficientnet_v2_s_v1` (384px) | 0.753 | 0.781 | 0.710 | ConvNeXt'ten farklı yerlerde hata yapıyor |
 | `swin_v2_t_v1` (256px, Kaggle) | 0.755 | 0.813 | 0.626 | nadir sınıflarda en iyi, melanomda zayıf |
 | `convnext_tiny_384_v1` (384px, Kaggle) | 0.771 | 0.784 | 0.664 | val'de çok iyi, testte 224 ile aynı |
+| `convnext_tiny_isic2019_v1` (224px + ISIC 2019) | 0.744 | 0.751 | 0.626 | ek veri; ensemble'a katkı yok |
 | **`ensemble_v1`, normal karar** | **0.783** | 0.809 | 0.692 | 4 model, kalibre, eşit ağırlık |
 | **`ensemble_v1`, tarama (mel eşiği 0.30)** | 0.781 | **0.823** | **0.888** | kaçan melanom 5, yanlış alarm 119 |
 
@@ -56,9 +57,14 @@ yüklemede darboğaz olmuş olabilir. Colab notebook'u yedek olarak duruyor.
    validation'da büyük sıçrama (F1 0.744 → 0.769), ama ensemble'a girince gürültüyü aşan bir
    kazanç yok, **ensemble_v1 değişmedi**. Testte tek model F1 0.771 (224: 0.774): validation'daki
    sıçrama tekrarlanmadı.
-4. **Dış test setini belirle ve kenara ayır** (ISIC 2018 resmi test; erişimi kontrol et). ← sıradaki
-5. **Ek veri** (ISIC 2019; 4'teki setle çakışanlar temizlenmeli).
-6. **Dış doğrulama** (her şey kesinleşince, bir kez).
+4. ~~Dış test setini belirle ve kenara ayır~~ (2026-10-16): ISIC 2018 Task 3 resmi test seti,
+   `external_test/` (kurallar README'de, `validate_manifest.py` çakışmada hata verir).
+5. ~~Ek veri~~ (2026-10-16, **durduruldu**): ISIC 2019 HAM dışı 14885 görüntü sadece train'e
+   (`add_isic2019.py`, `baselines/convnext_tiny_isic2019_v1/`). ConvNeXt tek model val'de +0.02,
+   ensemble'a katkı yok; testte daha kötü (F1 0.744, 224'ün 0.774'ü), melanom ve akiec recall
+   düştü (model "nv"ye kaydı; akiec'in anlamı değişti; farklı hastane). Kullanıcı kararıyla ek
+   veri hattı şimdilik durduruldu; README'de ileride denenebilecek düzeltmeler var.
+6. **Dış doğrulama** (her şey kesinleşince, bir kez). ← sıradaki: ensemble_v1 ile
 7. **Arayüz** (doktor fotoğraf yükler, sonuç alır).
 
 Her yeni tarif validation'da seçilir, test setinde bir kez ölçülür. Yeni bir model
