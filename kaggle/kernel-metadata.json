@@ -9,7 +9,8 @@
   "enable_internet": true,
   "machine_shape": "NvidiaTeslaT4",
   "dataset_sources": [
-    "kmader/skin-cancer-mnist-ham10000"
+    "kmader/skin-cancer-mnist-ham10000",
+    "andrewmvd/isic-2019"
   ],
   "competition_sources": [],
   "kernel_sources": []
