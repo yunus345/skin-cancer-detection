@@ -64,6 +64,14 @@ yüklemede darboğaz olmuş olabilir. Colab notebook'u yedek olarak duruyor.
    ensemble'a katkı yok; testte daha kötü (F1 0.744, 224'ün 0.774'ü), melanom ve akiec recall
    düştü (model "nv"ye kaydı; akiec'in anlamı değişti; farklı hastane). Kullanıcı kararıyla ek
    veri hattı şimdilik durduruldu; README'de ileride denenebilecek düzeltmeler var.
+**Tarif v2 denemesi (2026-10-17, Kaggle Version 5) GEÇERSİZ:** finetune lr 1e-4 + warmup + cosine +
+label smoothing 0.1. val_f1 0.657 (eski tarif 0.744). Sebep tarif değil, bir kod hatası: PyTorch'un
+CrossEntropyLoss(weight, label_smoothing) sınıf ağırlıklarını smoothing payına da uyguluyor; nv görüntüsünde
+df olasılığını artırmak loss'u düşürüyordu (model nadir sınıfları her yerde tahmin etti). Düzeltme:
+`WeightedLabelSmoothingCE` (ağırlık sadece gerçek sınıfa). Tarif düzeltilmiş kodla yeniden denenecek.
+**Proje 2026-10-17'de `~/Projeler/skin-cancer-detection`'a taşındı** (Masaüstü iCloud'du, kota dolu,
+dosyalar okunamıyordu). Kaggle CLI: `~/.local/kaggle-cli/bin/kaggle`.
+
 6. ~~Dış doğrulama~~ (2026-10-16, ilk ölçüm, `baselines/ensemble_v1/external_isic2018_test/`):
    ensemble_v1, ISIC 2018 resmi test seti (1512). macro_f1 0.749, balanced_accuracy 0.765
    (kendi testimizde 0.809: ~4.5 puan iyimsermiş), mel_recall 0.749; tarama modu mel_recall 0.842.

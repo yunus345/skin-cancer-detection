@@ -173,6 +173,30 @@ class FocalLoss(nn.Module):
         return focal_loss.mean()
 
 
+class WeightedLabelSmoothingCE(nn.Module):
+    """Class-weighted CrossEntropy + label smoothing; sinif agirligi SADECE gercek sinifa gore.
+
+    PyTorch'un CrossEntropyLoss(weight=..., label_smoothing=...) agirliklari dagitilan smoothing
+    kismina da uyguluyor: df agirligi 12, nv agirligi 0.2 iken bir nv goruntusunde df olasiligini
+    artirmak loss'u DUSURUYOR, model nadir siniflari her yerde tahmin etmeye itiliyor
+    (2026-10-16 Kaggle kosusunda val_f1 0.744 -> 0.657). Burada her ornegin loss'u kendi gercek
+    sinifinin agirligiyla carpiliyor; label_smoothing=0 iken nn.CrossEntropyLoss(weight=w) ile ayni.
+    """
+
+    def __init__(self, weight: torch.Tensor, label_smoothing: float = 0.0):
+        super().__init__()
+        self.register_buffer('weight', weight)
+        self.label_smoothing = label_smoothing
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        log_probs = nn.functional.log_softmax(logits.float(), dim=1)
+        nll = -log_probs.gather(1, targets.unsqueeze(1)).squeeze(1)
+        smooth = -log_probs.mean(dim=1)  # kalan pay butun siniflara esit, agirliksiz
+        per_sample = (1 - self.label_smoothing) * nll + self.label_smoothing * smooth
+        sample_weight = self.weight[targets]
+        return (per_sample * sample_weight).sum() / sample_weight.sum()
+
+
 def select_device(preferred: str = 'auto') -> torch.device:
     if preferred != 'auto':
         return torch.device(preferred)
@@ -325,7 +349,10 @@ def train_model(
         # label_smoothing > 0: hedef "%100 bu sinif" yerine ornegin "%90 bu sinif, kalan %10 digerlerine
         # esit". Modelin asiri emin olmasini engeller (val_loss'un yukselmesi / T=1.47 sorunu).
         # Not: loss degeri artik label_smoothing=0 kosularinin loss'uyla karsilastirilamaz.
-        criterion = nn.CrossEntropyLoss(weight=class_weights.to(device), label_smoothing=label_smoothing)
+        if label_smoothing > 0:
+            criterion = WeightedLabelSmoothingCE(class_weights.to(device), label_smoothing)
+        else:
+            criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
 
     loader_kwargs = dict(
         batch_size=batch_size,
