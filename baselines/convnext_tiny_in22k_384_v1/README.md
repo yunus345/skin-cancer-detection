@@ -49,5 +49,21 @@ yeni modelin kazancı diğer sınıflardan geliyor.
 
 Hiçbir seçenek gürültü eşiğini aşmadı (en iyisi %94, aralık sıfırı içeriyor) ve melanomda
 geriliyor: **ensemble_v1 değişmedi.** Model, tarif v2'li yeni ensemble'ın (ve 5-fold CV'nin)
-temel yapı taşı olarak saklanıyor. Test sonuçlarına (`test_metrics.json`) bakılmadı.
-Ağırlıklar: yerel disk (111MB, git'te değil).
+temel yapı taşı olarak saklanıyor. Ağırlıklar: yerel disk (111MB, git'te değil).
+
+## Test seti (karar verildikten sonra, kayıt amaçlı; 986 görüntü)
+
+| | ensemble_v1 (normal) | convnext_tiny_v1 (224) | **bu model** |
+|---|---|---|---|
+| macro_f1 | 0.783 | 0.774 | **0.818** (0.775-0.850) |
+| balanced_accuracy | 0.809 | 0.798 | 0.809 (0.761-0.852) |
+| macro_precision | 0.775 | 0.769 | **0.841** |
+| accuracy | 0.835 | 0.802 | **0.870** |
+| mel_recall | 0.692 | **0.766** | 0.664 (0.568-0.745) |
+| mel_precision | 0.474 | 0.436 | **0.592** |
+| mel→nv / nv→mel | 20 / 61 | 7 / 88 | 20 / **37** |
+
+Validation'daki tablo testte de görüldü: genel F1 belirgin şekilde daha iyi (1k-384 modelinin
+aksine kazanç testte kaybolmadı). Melanomda ensemble_v1 ile normal çalışma noktasında yakın
+(aynı sayıda kaçırılan melanom, çok daha az yanlış alarm); 224'lük ConvNeXt'ten ise belirgin
+şekilde fazla kaçırıyor. Tek test bakışıdır, karar değişmez.
