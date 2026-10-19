@@ -12,3 +12,4 @@ albumentations
 tqdm
 jupyter
 PyYAML
+timm

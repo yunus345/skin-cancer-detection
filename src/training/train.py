@@ -37,6 +37,13 @@ NATIVE_IMAGE_SIZE = {
     'convnext_tiny': 224,
     'efficientnet_v2_s': 384,
     'swin_v2_t': 256,
+    # timm: ImageNet-22k ile on-egitilmis, ImageNet-1k'da 384px'te ince ayarlanmis ConvNeXt-Tiny.
+    'convnext_tiny_in22k_384': 384,
+}
+
+# torchvision'da olmayan agirliklar icin timm model adlari (Hugging Face'ten indirilir).
+TIMM_MODELS = {
+    'convnext_tiny_in22k_384': 'convnext_tiny.fb_in22k_ft_in1k_384',
 }
 
 
@@ -139,6 +146,11 @@ def build_model(num_classes: int, architecture: str = 'efficientnet_b0'):
     elif architecture == 'swin_v2_t':
         model = swin_v2_t(weights=Swin_V2_T_Weights.DEFAULT)
         model.head = nn.Linear(model.head.in_features, num_classes)
+    elif architecture in TIMM_MODELS:
+        import timm  # sadece timm modelleri icin gerekli
+        # num_classes verilince timm son katmani (head.fc) 7 sinifli yeni bir katmanla degistiriyor;
+        # isim 'head' ile basladigi icin set_backbone_trainable onu donmadan birakir.
+        model = timm.create_model(TIMM_MODELS[architecture], pretrained=True, num_classes=num_classes)
     else:
         raise ValueError(f'Bilinmeyen mimari: {architecture}')
     return model
