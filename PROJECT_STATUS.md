@@ -77,8 +77,14 @@ eğitim sonda oturuyor.** Ensemble'a eski ConvNeXt yerine girince 0.768 → 0.78
 0.788; 224 tarif v2: 0.745), T 0.93. Tek başına 4'lü ensemble'dan iyi (0.794 vs 0.768, %94)
 ama melanomda zayıf (mel recall 0.647; aynı recall için daha çok yanlış alarm). Gürültü eşiği
 aşılmadı + melanom gerilemesi: **ensemble_v1 değişmedi.**
-**Sıradaki adım:** bu tarifle (22k + 384 + tarif v2) 5-fold CV: hem güvenilir ölçüm hem 5 modelli
-ensemble. Sonra tek değişkenli denemeler (ConvNeXt-Small, tarif v3, farklı mimari).
+**Yön değişikliği (2026-10-19, kullanıcı kararı):** önce TEK modeli en iyi hale getir; 5-fold CV
+pahalı, ertelendi (gerekirse ensemble yerine tek modelle devam). Final model tarif donunca
+train+val ile, cosine planının tamamı (30 epoch) koşulup son epoch alınarak eğitilecek.
+**0. adım (bedava, val, aynı model):** test çözünürlüğü 416/448/512 ve flip TTA hiçbirini
+iyileştirmedi (416: +0.000, 448: −0.002, 512: −0.004, 384 TTA: −0.014 / %3). Çözünürlük arttıkça
+mel recall düştü (0.647 → 0.529). 384'te kalınıyor, TTA yok.
+**Sıradaki adım (Kaggle, paralel iki koşu):** A) Tiny seed 2 + EMA gölge kopyası (eğitim gürültüsü
+cetveli + EMA etkisi, tek koşuda); B) ConvNeXt-Small 22k 384 + EMA. Sonra multi-crop / final.
 **Proje 2026-10-17'de `~/Projeler/skin-cancer-detection`'a taşındı** (Masaüstü iCloud'du, kota dolu,
 dosyalar okunamıyordu). Kaggle CLI: `~/.local/kaggle-cli/bin/kaggle`.
 
