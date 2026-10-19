@@ -7,7 +7,7 @@
   "is_private": true,
   "enable_gpu": true,
   "enable_internet": true,
-  "machine_shape": "NvidiaTeslaT4",
+  "machine_shape": "NvidiaTeslaP100",
   "dataset_sources": [
     "kmader/skin-cancer-mnist-ham10000",
     "andrewmvd/isic-2019"
