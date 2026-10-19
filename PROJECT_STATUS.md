@@ -12,11 +12,12 @@ bkz. CLAUDE.md.
 | Model | macro_f1 | balanced_accuracy | mel_recall | Not |
 |---|---|---|---|---|
 | `baseline_v1` (EfficientNet-B0, 224px) | 0.698 | 0.762 | 0.626 | ağırlık git'te, `git checkout baseline-v1` |
-| `convnext_tiny_v1` (224px) | **0.774** | **0.798** | **0.766** | en iyi tek model |
+| `convnext_tiny_v1` (224px) | 0.774 | 0.798 | **0.766** | melanomu en az kaçıran tek model |
 | `efficientnet_v2_s_v1` (384px) | 0.753 | 0.781 | 0.710 | ConvNeXt'ten farklı yerlerde hata yapıyor |
 | `swin_v2_t_v1` (256px, Kaggle) | 0.755 | 0.813 | 0.626 | nadir sınıflarda en iyi, melanomda zayıf |
 | `convnext_tiny_384_v1` (384px, Kaggle) | 0.771 | 0.784 | 0.664 | val'de çok iyi, testte 224 ile aynı |
 | `convnext_tiny_isic2019_v1` (224px + ISIC 2019) | 0.744 | 0.751 | 0.626 | ek veri; ensemble'a katkı yok |
+| `convnext_tiny_in22k_384_v1` (22k, 384px, tarif v2) | **0.818** | 0.809 | 0.664 | **en iyi tek model**; mel→nv 20, nv→mel 37 |
 | **`ensemble_v1`, normal karar** | **0.783** | 0.809 | 0.692 | 4 model, kalibre, eşit ağırlık |
 | **`ensemble_v1`, tarama (mel eşiği 0.30)** | 0.781 | **0.823** | **0.888** | kaçan melanom 5, yanlış alarm 119 |
 
