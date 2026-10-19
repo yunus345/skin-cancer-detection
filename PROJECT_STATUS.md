@@ -71,7 +71,13 @@ df olasılığını artırmak loss'u düşürüyordu (model nadir sınıfları h
 `WeightedLabelSmoothingCE` (ağırlık sadece gerçek sınıfa). **Düzeltilmiş tarif (Version 6,
 `baselines/convnext_tiny_recipe2_v1/`): tek model val F1 0.744 → 0.766, kalibrasyon T 1.47 → 0.92,
 eğitim sonda oturuyor.** Ensemble'a eski ConvNeXt yerine girince 0.768 → 0.780 (gürültü eşiği altında).
-**Sıradaki karar (yeni oturumda planlanacak):** diğer modelleri de tarif v2 ile eğitmek / 5-fold CV.
+**ConvNeXt-T ImageNet-22k + 384px + tarif v2 (2026-10-19, Kaggle Version 9, P100,
+`baselines/convnext_tiny_in22k_384_v1/`): en iyi tek model.** Val F1 0.803 (son 5 epoch ort.
+0.788; 224 tarif v2: 0.745), T 0.93. Tek başına 4'lü ensemble'dan iyi (0.794 vs 0.768, %94)
+ama melanomda zayıf (mel recall 0.647; aynı recall için daha çok yanlış alarm). Gürültü eşiği
+aşılmadı + melanom gerilemesi: **ensemble_v1 değişmedi.**
+**Sıradaki adım:** bu tarifle (22k + 384 + tarif v2) 5-fold CV: hem güvenilir ölçüm hem 5 modelli
+ensemble. Sonra tek değişkenli denemeler (ConvNeXt-Small, tarif v3, farklı mimari).
 **Proje 2026-10-17'de `~/Projeler/skin-cancer-detection`'a taşındı** (Masaüstü iCloud'du, kota dolu,
 dosyalar okunamıyordu). Kaggle CLI: `~/.local/kaggle-cli/bin/kaggle`.
 
