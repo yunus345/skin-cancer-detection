@@ -150,7 +150,11 @@ def build_model(num_classes: int, architecture: str = 'efficientnet_b0'):
         import timm  # sadece timm modelleri icin gerekli
         # num_classes verilince timm son katmani (head.fc) 7 sinifli yeni bir katmanla degistiriyor;
         # isim 'head' ile basladigi icin set_backbone_trainable onu donmadan birakir.
-        model = timm.create_model(TIMM_MODELS[architecture], pretrained=True, num_classes=num_classes)
+        # drop_path_rate=0.1: torchvision ConvNeXt-Tiny'nin varsayilan stochastic depth'i (0 -> 0.1,
+        # bloklar boyunca artan). timm'de varsayilan 0; vermezsek eski ConvNeXt'lerden daha az
+        # duzenlilestirilmis bir model egitmis oluruz (2026-10-19'da Version 7 bu yuzden iptal edildi).
+        model = timm.create_model(TIMM_MODELS[architecture], pretrained=True, num_classes=num_classes,
+                                  drop_path_rate=0.1)
     else:
         raise ValueError(f'Bilinmeyen mimari: {architecture}')
     return model
