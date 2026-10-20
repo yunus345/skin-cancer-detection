@@ -39,11 +39,13 @@ NATIVE_IMAGE_SIZE = {
     'swin_v2_t': 256,
     # timm: ImageNet-22k ile on-egitilmis, ImageNet-1k'da 384px'te ince ayarlanmis ConvNeXt-Tiny.
     'convnext_tiny_in22k_384': 384,
+    'convnext_small_in22k_384': 384,
 }
 
 # torchvision'da olmayan agirliklar icin timm model adlari (Hugging Face'ten indirilir).
 TIMM_MODELS = {
     'convnext_tiny_in22k_384': 'convnext_tiny.fb_in22k_ft_in1k_384',
+    'convnext_small_in22k_384': 'convnext_small.fb_in22k_ft_in1k_384',  # ~50M param, Tiny'nin ~1.8 kati
 }
 
 
@@ -128,7 +130,7 @@ def seed_augmentations_per_worker(worker_id):
     worker_info.dataset.transform.compose.set_random_seed(worker_info.seed)
 
 
-def build_model(num_classes: int, architecture: str = 'efficientnet_b0'):
+def build_model(num_classes: int, architecture: str = 'efficientnet_b0', drop_path_rate: float = 0.1):
     # CNN'ler son katmanini `classifier` adli bir Sequential icinde tutuyor (Linear'in indeksi farkli:
     # EfficientNet B0/V2: [1], ConvNeXt: LayerNorm+Flatten sonrasi [2]); Swin'de ise tek bir `head` Linear'i.
     if architecture == 'efficientnet_b0':
@@ -153,8 +155,10 @@ def build_model(num_classes: int, architecture: str = 'efficientnet_b0'):
         # drop_path_rate=0.1: torchvision ConvNeXt-Tiny'nin varsayilan stochastic depth'i (0 -> 0.1,
         # bloklar boyunca artan). timm'de varsayilan 0; vermezsek eski ConvNeXt'lerden daha az
         # duzenlilestirilmis bir model egitmis oluruz (2026-10-19'da Version 7 bu yuzden iptal edildi).
+        # Daha buyuk modeller ezberlemeye daha yatkin; Small icin --drop-path 0.2 kullanildi.
+        # Sadece egitimde etkili: degerlendirmede (model.eval()) hicbir blok atlanmaz.
         model = timm.create_model(TIMM_MODELS[architecture], pretrained=True, num_classes=num_classes,
-                                  drop_path_rate=0.1)
+                                  drop_path_rate=drop_path_rate)
     else:
         raise ValueError(f'Bilinmeyen mimari: {architecture}')
     return model
@@ -250,6 +254,17 @@ def evaluate(model, loader, device, criterion=None, use_amp=False):
     }
 
 
+def save_checkpoint(model, state, metrics, path):
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'labels': state['labels'],
+        'architecture': state['architecture'],
+        'image_size': state['image_size'],
+        'augmentation': state['augmentation'],
+        'metrics': metrics,
+    }, path)
+
+
 def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader, val_loader, criterion, device, out_dir, state, scaler):
     """Trains for num_epochs, mutating `state` (best_f1/best_metrics/epochs_without_improvement/global_epoch).
 
@@ -274,12 +289,24 @@ def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader,
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
+            if state['ema'] is not None:
+                # Golge kopya her adimda gercek modele binde bir (decay 0.999) yaklasir. Gercek modelin
+                # egitimine hicbir etkisi yok: sadece onu izliyor.
+                state['ema'].update(model)
             train_loss += loss.item()
         if scheduler is not None:
             scheduler.step()
 
         metrics = evaluate(model, val_loader, device, criterion, use_amp=use_amp)
         metrics['phase'] = phase_name
+        if state['ema'] is not None:
+            ema_metrics = evaluate(state['ema'].module, val_loader, device, criterion, use_amp=use_amp)
+            ema_metrics['phase'] = phase_name
+            # EMA en iyisi ayri dosyaya; early stopping ve best_model.pt gercek modele gore (eskisi gibi).
+            if ema_metrics['f1'] > state['best_ema_f1']:
+                state['best_ema_f1'] = ema_metrics['f1']
+                state['best_ema_metrics'] = ema_metrics
+                save_checkpoint(state['ema'].module, state, ema_metrics, out_dir / 'best_model_ema.pt')
         avg_train_loss = train_loss / max(len(train_loader), 1)
         epoch_seconds = time.time() - epoch_start
         print(
@@ -288,23 +315,21 @@ def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader,
             f'val_balanced_accuracy={metrics["balanced_accuracy"]:.4f} val_f1={metrics["f1"]:.4f} '
             f'sure={epoch_seconds / 60:.1f}dk'
         )
+        if state['ema'] is not None:
+            print(f'    [EMA] val_loss={ema_metrics["loss"]:.4f} val_balanced_accuracy={ema_metrics["balanced_accuracy"]:.4f} '
+                  f'val_f1={ema_metrics["f1"]:.4f}')
         history_entry = dict(metrics)
         history_entry['epoch'] = state['global_epoch']
         history_entry['train_loss'] = avg_train_loss
         history_entry['lr'] = current_lr
         history_entry['epoch_seconds'] = epoch_seconds
+        if state['ema'] is not None:
+            history_entry.update({f'ema_{k}': v for k, v in ema_metrics.items() if k != 'phase'})
         state['history'].append(history_entry)
         if metrics['f1'] > state['best_f1']:
             state['best_f1'] = metrics['f1']
             state['best_metrics'] = metrics
-            torch.save({
-                'model_state_dict': model.state_dict(),
-                'labels': state['labels'],
-                'architecture': state['architecture'],
-                'image_size': state['image_size'],
-                'augmentation': state['augmentation'],
-                'metrics': metrics,
-            }, out_dir / 'best_model.pt')
+            save_checkpoint(model, state, metrics, out_dir / 'best_model.pt')
             state['epochs_without_improvement'] = 0
         else:
             state['epochs_without_improvement'] += 1
@@ -334,6 +359,8 @@ def train_model(
     augmentation: str = 'v1',
     label_smoothing: float = 0.0,
     warmup_epochs: int = 2,
+    drop_path_rate: float = 0.1,
+    ema_decay: float = 0.0,
 ):
     torch.manual_seed(seed)
     device = select_device(device_arg)
@@ -346,6 +373,7 @@ def train_model(
     print(f'Mixed precision (AMP): {"on" if on_cuda else "off"}, num_workers={num_workers}')
     print(f'Architecture: {architecture}, image size: {image_size}px, augmentation: {augmentation}')
     print(f'Recipe: lr={learning_rate:.0e}/{finetune_lr:.0e}, scheduler={scheduler_name} (warmup {warmup_epochs}), label_smoothing={label_smoothing}, patience={patience}')
+    print(f'seed={seed}, drop_path_rate={drop_path_rate} (sadece timm modelleri), ema_decay={ema_decay or "kapali"}')
 
     train_dataset = SkinCancerDataset(manifest_path, split='train', transform=build_transforms(image_size, train=True, augmentation=augmentation))
     val_dataset = SkinCancerDataset(manifest_path, split='val', transform=build_transforms(image_size))
@@ -353,7 +381,8 @@ def train_model(
     if len(train_dataset) == 0 or len(val_dataset) == 0:
         raise ValueError('Manifest must contain non-empty train/val splits. Run src.data.split_manifest first.')
 
-    model = build_model(num_classes=len(train_dataset.labels), architecture=architecture).to(device)
+    model = build_model(num_classes=len(train_dataset.labels), architecture=architecture,
+                        drop_path_rate=drop_path_rate).to(device)
     label_counts = torch.bincount(torch.tensor([
         train_dataset.label_to_idx[str(row['label']).strip()]
         for row in train_dataset.manifest
@@ -394,7 +423,15 @@ def train_model(
         'image_size': image_size,
         'augmentation': augmentation,
         'history': [],
+        'ema': None,
+        'best_ema_f1': -1.0,
+        'best_ema_metrics': None,
     }
+    if ema_decay > 0:
+        from timm.utils import ModelEmaV3
+        # EMA: agirliklarin hareketli ortalamasini tutan golge kopya. decay 0.999 = yaklasik son 1000 adimin
+        # (bizde ~4 epoch) ortalamasi. Epoch'tan epoch'a val skorundaki zipalamayi yumusatmasi bekleniyor.
+        state['ema'] = ModelEmaV3(model, decay=ema_decay)
 
     def build_scheduler(optimizer, phase_epochs, phase_name):
         if scheduler_name == 'cosine':
@@ -451,6 +488,13 @@ def train_model(
     history_path = out_dir / 'training_history.json'
     history_path.write_text(json.dumps(state['history'], indent=2))
 
+    if state['ema'] is not None:
+        (out_dir / 'metrics_ema.json').write_text(json.dumps(state['best_ema_metrics'], indent=2))
+        # Son epoch'un EMA modeli de saklaniyor: final egitimde (train+val) en iyi epoch secilemeyecegi icin
+        # "son model" ile "en iyi model" arasindaki farki gormek istiyoruz.
+        save_checkpoint(state['ema'].module, state, state['history'][-1], out_dir / 'last_model_ema.pt')
+        print(f'EMA en iyi val_f1={state["best_ema_f1"]:.4f} (gercek model: {state["best_f1"]:.4f})')
+
     print(f'Wrote checkpoint to {checkpoint_path}')
     print(f'Wrote metrics to {metrics_path}')
     print(f'Wrote training history to {history_path}')
@@ -482,6 +526,9 @@ def main():
     parser.add_argument('--augmentation', choices=['v1', 'v2'], default='v1',
                         help='Egitim augmentation tarifi: v1 (ilk dort model) ya da v2 (kare-sonra-kirp + tam tur dondurme)')
     parser.add_argument('--num-workers', type=int, default=2, help='Veriyi arka planda hazirlayan yardimci surec sayisi (0 = ana surecte, sirayla)')
+    parser.add_argument('--drop-path', type=float, default=0.1, help='Stochastic depth orani (sadece timm modelleri)')
+    parser.add_argument('--ema-decay', type=float, default=0.0,
+                        help='>0 ise agirliklarin EMA kopyasi da tutulur ve her epoch val de olculur (or. 0.999; 0 = kapali)')
     args = parser.parse_args()
 
     finetune_lr = args.finetune_lr if args.finetune_lr is not None else args.learning_rate / 10
@@ -507,6 +554,8 @@ def main():
         augmentation=args.augmentation,
         label_smoothing=args.label_smoothing,
         warmup_epochs=args.warmup_epochs,
+        drop_path_rate=args.drop_path,
+        ema_decay=args.ema_decay,
     )
 
 
