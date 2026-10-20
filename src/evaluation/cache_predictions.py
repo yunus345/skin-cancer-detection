@@ -69,7 +69,10 @@ def main():
             accuracy = (logits.argmax(axis=1) == targets).mean()
             print(f'{checkpoint_path} [{split}] {len(targets)} goruntu, accuracy={accuracy:.4f}')
 
-        out_path = Path(checkpoint_path).with_name('predictions_tta.npz' if args.tta else 'predictions.npz')
+        # best_model_ema.pt gibi ayni klasordeki ikinci checkpoint'ler kendi dosyasina yazilir (predictions_ema.npz).
+        suffix = Path(checkpoint_path).stem.removeprefix('best_model').lstrip('_')
+        name = '_'.join(['predictions'] + [s for s in (suffix, 'tta' if args.tta else '') if s])
+        out_path = Path(checkpoint_path).with_name(f'{name}.npz')
         np.savez_compressed(out_path, **outputs)
         print(f'Wrote {out_path}')
 

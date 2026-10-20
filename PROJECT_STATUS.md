@@ -83,8 +83,14 @@ train+val ile, cosine planının tamamı (30 epoch) koşulup son epoch alınarak
 **0. adım (bedava, val, aynı model):** test çözünürlüğü 416/448/512 ve flip TTA hiçbirini
 iyileştirmedi (416: +0.000, 448: −0.002, 512: −0.004, 384 TTA: −0.014 / %3). Çözünürlük arttıkça
 mel recall düştü (0.647 → 0.529). 384'te kalınıyor, TTA yok.
-**Sıradaki adım (Kaggle, paralel iki koşu):** A) Tiny seed 2 + EMA gölge kopyası (eğitim gürültüsü
-cetveli + EMA etkisi, tek koşuda); B) ConvNeXt-Small 22k 384 + EMA. Sonra multi-crop / final.
+**Tiny seed 2 + EMA ve Small + EMA (2026-10-20, paralel Kaggle koşuları, ikisi de T4'e düştü;
+`baselines/convnext_tiny_in22k_384_seed2_ema/`, `baselines/convnext_small_in22k_384_v1/`):**
+- Ölçüm cetveli: sadece seed değişince son 5 epoch F1 0.013, mel recall 0.11 oynuyor.
+- EMA: F1 aynı, NLL ve melanom ayırma biraz daha iyi, zıplamalar yok → tarife eklendi (`--ema-decay 0.999`).
+- Small: gürültü içinde (son 5 epoch 0.780, Tiny 0.788/0.775), 1.6 kat pahalı → kabul edilmedi.
+- 2 Tiny seed ortalaması melanom ayırmada ensemble_v1 seviyesinde (73 / 70 alarm).
+**Sıradaki karar (kullanıcıyla):** ek veri (melanom için), final eğitim (train+val, EMA, son epoch),
+gerekirse 2-3 seed Tiny.
 **Proje 2026-10-17'de `~/Projeler/skin-cancer-detection`'a taşındı** (Masaüstü iCloud'du, kota dolu,
 dosyalar okunamıyordu). Kaggle CLI: `~/.local/kaggle-cli/bin/kaggle`.
 
