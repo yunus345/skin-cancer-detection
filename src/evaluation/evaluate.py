@@ -14,6 +14,7 @@ from sklearn.metrics import (
     f1_score,
     precision_recall_fscore_support,
     precision_score,
+    roc_auc_score,
 )
 from torch.utils.data import DataLoader
 
@@ -61,12 +62,15 @@ def apply_threshold_override(probs, class_idx, threshold):
     return preds
 
 
-def summarize(targets, predictions, labels) -> dict:
+def summarize(targets, predictions, labels, probs=None) -> dict:
     """Metrik hiyerarsisi (sunumla kararlastirdigimiz standart):
     1. Headline: macro_f1 - model secimi / kendi aramizdaki karsilastirma icin.
     2. Dis karsilastirma: balanced_accuracy (=macro recall, ISIC leaderboard ile kiyas icin)
        ve macro_precision (sadece ilgili makaleyle kiyas icin, "MCA" DEMIYORUZ - yaniltici).
     3. Klinik: mel_recall + mel_precision - kanseri kacirmama onceligi.
+
+    probs verilirse AUC de eklenir. AUC esikten bagimsiz: kararin (argmax / mel esigi) nerede
+    verildigine degil, olasiliklarin dogru sinifi ne kadar one siraladigina bakar.
     """
     label_ids = list(range(len(labels)))
     overall = {
@@ -87,15 +91,29 @@ def summarize(targets, predictions, labels) -> dict:
         clinical = {'mel_recall': per_class['mel']['recall'], 'mel_precision': per_class['mel']['precision']}
 
     matrix = confusion_matrix(targets, predictions, labels=label_ids)
-    return {
+    results = {
         'overall': overall,
         'clinical': clinical,
         'per_class': per_class,
         'confusion_matrix': {'labels': labels, 'matrix': matrix.tolist()},
     }
+    if probs is not None:
+        results['auc'] = compute_auc(targets, probs, labels)
+    return results
 
 
-def bootstrap_ci(targets, predictions, labels, n_iterations: int = 1000, seed: int = 42) -> dict:
+def compute_auc(targets, probs, labels) -> dict:
+    """macro_auc: her sinif icin "bu sinif mi, degil mi" (one-vs-rest) AUC'lerinin ortalamasi.
+    mel_auc: rastgele bir melanom, rastgele bir melanom-olmayandan daha yuksek mel olasiligi aliyor mu."""
+    label_ids = list(range(len(labels)))
+    auc = {'macro_auc': float(roc_auc_score(targets, probs, multi_class='ovr', average='macro', labels=label_ids))}
+    if 'mel' in labels:
+        mel_idx = labels.index('mel')
+        auc['mel_auc'] = float(roc_auc_score(targets == mel_idx, probs[:, mel_idx]))
+    return auc
+
+
+def bootstrap_ci(targets, predictions, labels, n_iterations: int = 1000, seed: int = 42, probs=None) -> dict:
     """Test setini yerine-koyarak (with replacement) n_iterations kez yeniden orneklep her seferinde
     headline metrikleri hesaplar; %95 guven araligini (2.5-97.5 persentil) dondurur. Model tekrar
     calistirilmiyor - sadece elimizdeki (targets, predictions) ciftleri uzerinde, hizli bir islem."""
@@ -116,6 +134,10 @@ def bootstrap_ci(targets, predictions, labels, n_iterations: int = 1000, seed: i
             )
             samples['mel_precision'].append(float(pc_precision[0]))
             samples['mel_recall'].append(float(pc_recall[0]))
+        # AUC her sinifin ornekte bulunmasini ister; nadir bir sinif hic cekilmediyse o turu atla.
+        if probs is not None and len(np.unique(t)) == len(labels):
+            for key, value in compute_auc(t, probs[idx], labels).items():
+                samples.setdefault(key, []).append(value)
 
     ci = {}
     for key, values in samples.items():
@@ -155,6 +177,8 @@ def print_report(results: dict) -> None:
             f'[3. Klinik]         mel_recall: {fmt("mel_recall", clinical["mel_recall"])}\n'
             f'                       mel_precision: {fmt("mel_precision", clinical["mel_precision"])}'
         )
+    if results.get('auc'):
+        print('[AUC, eşikten bağımsız] ' + '  '.join(f'{k}: {fmt(k, v)}' for k, v in results['auc'].items()))
     print(f'\naccuracy (bilgi amaçlı, dengesiz veride yanıltıcı olabilir): {overall["accuracy"]:.4f}\n')
     print(f'{"class":>8s} {"precision":>10s} {"recall":>10s} {"f1":>10s} {"support":>8s}')
     for label, m in results['per_class'].items():
@@ -199,11 +223,11 @@ def main():
     else:
         predictions = probs.argmax(axis=1)
 
-    results = summarize(targets, predictions, labels)
+    results = summarize(targets, predictions, labels, probs=probs)
     if args.mel_threshold is not None:
         results['mel_threshold'] = args.mel_threshold
     if args.bootstrap_iterations > 0:
-        results['bootstrap_ci'] = bootstrap_ci(targets, predictions, labels, n_iterations=args.bootstrap_iterations)
+        results['bootstrap_ci'] = bootstrap_ci(targets, predictions, labels, n_iterations=args.bootstrap_iterations, probs=probs)
     print_report(results)
 
     output_path = Path(args.output)
