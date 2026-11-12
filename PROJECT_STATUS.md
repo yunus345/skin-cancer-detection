@@ -25,7 +25,7 @@ Proje geliştirilmeye devam ediyor (v2). Önce v1 kapatılacak, sonra ölçüm a
    - [x] En iyi ağırlıkları Drive `archive/`'a yedekle (22k seed 42, seed 2, seed 2 EMA; MD5 eşleşti, 2026-11-12)
    - [x] `.gitignore`: `baselines/*/*.pt`
    - [x] Bölme dosyası git'te: `splits/ham10000_lesion_split_v1.csv` (MD5 `a5e29e8b4186db15209b31715fa3a94a`). `validate_manifest.py` üretilen bölme bundan saparsa hata veriyor.
-   - [ ] Final tarifi val'de dondur (`baselines/final_v1/`)
+   - [x] Final tarif val'de donduruldu: `baselines/final_v1/` (iki seed ortalaması, tarama eşiği 0.28)
    - [ ] AUC ekle, iç test ve dış test tek ölçüm
    - [ ] README ve EXPERIMENTS.md
 2. Baseline 5-fold CV (~5 saat Kaggle); hedef burada kilitlenir
@@ -35,7 +35,7 @@ Proje geliştirilmeye devam ediyor (v2). Önce v1 kapatılacak, sonra ölçüm a
 6. Deney 3: serbest
 7. Final: 5 fold ortalaması, iç test ve dış testte birer ölçüm
 
-**Sıradaki tek adım:** final tarifi yalnızca val ile dondurmak (`baselines/final_v1/README.md`), test ölçümünden önce commit.
+**Sıradaki tek adım:** `summarize()`'a AUC eklemek, sonra final_v1'i iç testte ve dış testte birer kez ölçmek.
 
 ---
 

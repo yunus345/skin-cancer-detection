@@ -1,0 +1,71 @@
+{
+  "name": "final_v1",
+  "chosen": "B_iki_seed",
+  "reason": "F1 farki -0.001 gurultu icinde (< 0.013); daha az yanlis melanom alarmi",
+  "weights": "esit",
+  "rule": {
+    "noise_f1": 0.013,
+    "target_mel_recall": 0.8
+  },
+  "models": {
+    "seed42": "baselines/convnext_tiny_in22k_384_v1/predictions.npz",
+    "seed2": "baselines/convnext_tiny_in22k_384_seed2_ema/predictions.npz"
+  },
+  "temperatures": {
+    "seed42": 0.9300000000000004,
+    "seed2": 0.8900000000000003
+  },
+  "mel_threshold": 0.28,
+  "candidates_val": {
+    "A_tek_model": {
+      "models": {
+        "seed42": "baselines/convnext_tiny_in22k_384_v1/predictions.npz"
+      },
+      "temperatures": {
+        "seed42": 0.9300000000000004
+      },
+      "val_normal": {
+        "macro_f1": 0.7943118811795262,
+        "balanced_accuracy": 0.793175226820262,
+        "macro_precision": 0.8093465674110834,
+        "mel_recall": 0.6470588235294118,
+        "mel_precision": 0.6346153846153846
+      },
+      "mel_threshold": 0.11,
+      "val_screening": {
+        "macro_f1": 0.7670995546505088,
+        "balanced_accuracy": 0.7762149147649193,
+        "macro_precision": 0.7840649139636765,
+        "mel_recall": 0.803921568627451,
+        "mel_precision": 0.4659090909090909
+      },
+      "val_false_mel_alarms": 94
+    },
+    "B_iki_seed": {
+      "models": {
+        "seed42": "baselines/convnext_tiny_in22k_384_v1/predictions.npz",
+        "seed2": "baselines/convnext_tiny_in22k_384_seed2_ema/predictions.npz"
+      },
+      "temperatures": {
+        "seed42": 0.9300000000000004,
+        "seed2": 0.8900000000000003
+      },
+      "val_normal": {
+        "macro_f1": 0.7930143667832196,
+        "balanced_accuracy": 0.7945379217664615,
+        "macro_precision": 0.8028832404926777,
+        "mel_recall": 0.696078431372549,
+        "mel_precision": 0.6283185840707964
+      },
+      "mel_threshold": 0.28,
+      "val_screening": {
+        "macro_f1": 0.7811890524085617,
+        "balanced_accuracy": 0.7905691541811677,
+        "macro_precision": 0.7902673733521589,
+        "mel_recall": 0.803921568627451,
+        "mel_precision": 0.5290322580645161
+      },
+      "val_false_mel_alarms": 73
+    }
+  }
+}
