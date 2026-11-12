@@ -1,0 +1,16 @@
+{
+  "seed42": {
+    "macro_f1": 0.7874093335473813,
+    "balanced_accuracy": 0.7756335199740745,
+    "macro_precision": 0.8048459375075454,
+    "mel_recall": 0.695906432748538,
+    "mel_precision": 0.664804469273743
+  },
+  "seed2": {
+    "macro_f1": 0.7800370768587019,
+    "balanced_accuracy": 0.7909576701125312,
+    "macro_precision": 0.776467193350135,
+    "mel_recall": 0.7660818713450293,
+    "mel_precision": 0.5720524017467249
+  }
+}

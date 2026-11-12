@@ -26,7 +26,7 @@ Proje geliştirilmeye devam ediyor (v2). Önce v1 kapatılacak, sonra ölçüm a
    - [x] `.gitignore`: `baselines/*/*.pt`
    - [x] Bölme dosyası git'te: `splits/ham10000_lesion_split_v1.csv` (MD5 `a5e29e8b4186db15209b31715fa3a94a`). `validate_manifest.py` üretilen bölme bundan saparsa hata veriyor.
    - [x] Final tarif val'de donduruldu: `baselines/final_v1/` (iki seed ortalaması, tarama eşiği 0.28)
-   - [ ] AUC ekle, iç test ve dış test tek ölçüm
+   - [x] AUC eklendi; final_v1 tek ölçüm: iç test F1 0.829 / BA 0.832, dış test (ikinci bakış) F1 0.795 / BA 0.796
    - [ ] README ve EXPERIMENTS.md
 2. Baseline 5-fold CV (~5 saat Kaggle); hedef burada kilitlenir
 3. Temiz dış test setini ayır (deneylerden önce)
@@ -35,7 +35,7 @@ Proje geliştirilmeye devam ediyor (v2). Önce v1 kapatılacak, sonra ölçüm a
 6. Deney 3: serbest
 7. Final: 5 fold ortalaması, iç test ve dış testte birer ölçüm
 
-**Sıradaki tek adım:** `summarize()`'a AUC eklemek, sonra final_v1'i iç testte ve dış testte birer kez ölçmek.
+**Sıradaki tek adım:** `README.md` ve `EXPERIMENTS.md` yazmak (v1 kapanışının son maddesi).
 
 ---
 
