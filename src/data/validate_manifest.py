@@ -10,6 +10,8 @@ from PIL import Image
 
 from src.data.external_test import load_external_test_ids
 
+# Kayitli (dondurulmus) bolme: image_id, lesion_id, label, split. Butun kosular bununla ayni olmali.
+FROZEN_SPLIT = Path(__file__).resolve().parents[2] / 'splits' / 'ham10000_lesion_split_v1.csv'
 
 def validate_manifest(manifest_path: str, check_images: bool = True) -> bool:
     manifest_file = Path(manifest_path)
@@ -47,6 +49,19 @@ def validate_manifest(manifest_path: str, check_images: bool = True) -> bool:
         external = load_external_test_ids() & set(df['image_id'].astype(str).str.strip())
         if external:
             errors.append(f'{len(external)} images belong to the external test set (external_test/) - remove them')
+
+        # Bolme her kosuda yeniden uretiliyor; git'teki kayitli bolmeden sapma olursa (veri setinin klasor
+        # yapisi, pandas/sklearn surumu degisirse) test goruntuleri sessizce train'e gecebilir. Burada dur.
+        if FROZEN_SPLIT.exists():
+            frozen = pd.read_csv(FROZEN_SPLIT).set_index('image_id')['split']
+            current = df.assign(image_id=df['image_id'].astype(str).str.strip()).set_index('image_id')['split']
+            common = frozen.index.intersection(current.index)
+            moved = int((frozen[common] != current[common]).sum())
+            if moved:
+                errors.append(f'{moved} images are in a different split than {FROZEN_SPLIT.name} (frozen split changed)')
+            absent = len(frozen) - len(common)
+            if absent:
+                errors.append(f'{absent} images of {FROZEN_SPLIT.name} are missing from the manifest')
 
     if 'lesion_id' in df.columns:
         split_counts = df.groupby('lesion_id')['split'].nunique()

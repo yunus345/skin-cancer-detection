@@ -1,185 +1,534 @@
-# Proje Durumu
+# Proje Durumu: Bağımsız Denetim Raporu
 
-(Projeye her dönüşünde önce burayı oku — sohbet geçmişini hatırlamana gerek yok.)
+Tarih: 2026-10-26 · Hazırlayan: bağımsız denetçi (salt okunur inceleme) · İncelenen son commit: `e01dec2` (2026-10-20)
 
-## Bu ne projesi?
-HAM10000 veri setiyle cilt lezyonu sınıflandırma (7 sınıf: akiec, bcc, bkl,
-df, mel, nv, vasc). PyTorch, transfer learning. Öğrenme amaçlı bir proje —
-bkz. CLAUDE.md.
+Yöntem: git geçmişi, `baselines/*` altındaki tüm metrik/tahmin dosyaları, kaynak kod ve Kaggle notebook'u okundu.
+Val ve test metrikleri kayıtlı logit'lerden (`predictions*.npz`) bağımsız olarak yeniden hesaplandı. Val üzerindeki
+ret kararları repodaki scriptlerle (`ensemble_val.py --tta-study / --candidate-study / --weight-study`,
+`metadata_fusion.py`) yeniden üretildi. Hiçbir model eğitilmedi, hiçbir kod dosyası değiştirilmedi.
 
-## Eğitilmiş modeller (test seti, hepsi `baselines/` altında)
+---
 
-| Model | macro_f1 | balanced_accuracy | mel_recall | Not |
-|---|---|---|---|---|
-| `baseline_v1` (EfficientNet-B0, 224px) | 0.698 | 0.762 | 0.626 | ağırlık git'te, `git checkout baseline-v1` |
-| `convnext_tiny_v1` (224px) | 0.774 | 0.798 | **0.766** | melanomu en az kaçıran tek model |
-| `efficientnet_v2_s_v1` (384px) | 0.753 | 0.781 | 0.710 | ConvNeXt'ten farklı yerlerde hata yapıyor |
-| `swin_v2_t_v1` (256px, Kaggle) | 0.755 | 0.813 | 0.626 | nadir sınıflarda en iyi, melanomda zayıf |
-| `convnext_tiny_384_v1` (384px, Kaggle) | 0.771 | 0.784 | 0.664 | val'de çok iyi, testte 224 ile aynı |
-| `convnext_tiny_isic2019_v1` (224px + ISIC 2019) | 0.744 | 0.751 | 0.626 | ek veri; ensemble'a katkı yok |
-| `convnext_tiny_in22k_384_v1` (22k, 384px, tarif v2) | **0.818** | 0.809 | 0.664 | **en iyi tek model**; mel→nv 20, nv→mel 37 |
-| **`ensemble_v1`, normal karar** | **0.783** | 0.809 | 0.692 | 4 model, kalibre, eşit ağırlık |
-| **`ensemble_v1`, tarama (mel eşiği 0.30)** | 0.781 | **0.823** | **0.888** | kaçan melanom 5, yanlış alarm 119 |
+## Güncel plan (2026-11-12, denetimden sonra kararlaştırıldı)
 
-Her klasörde README (ayrıntılı sonuçlar, güven aralıkları, bulgular) var.
-Ağırlıklar: `baseline_v1` git'te; diğerleri (50MB+) yerel diskte + Drive'da
-`skin-cancer-detection-runs/archive/<model adı>/` altında.
+Proje geliştirilmeye devam ediyor (v2). Önce v1 kapatılacak, sonra ölçüm aracı düzeltilecek, sonra en fazla 3 deney yapılacak.
 
-## Şu an neredeyiz?
-Plan "önce genişlik": birkaç farklı mimariyi aynı tarifle eğit, sonra ensemble.
-**Genişlik aşaması bitti (2026-10-13).** Dört model var; üç güçlü model
-(ConvNeXt, V2-S, Swin) farklı yerlerde güçlü: ConvNeXt melanomu en az kaçıran
-(mel→nv 7), Swin nadir sınıflarda en iyi (balanced_accuracy 0.813) ama
-melanomda zayıf (mel→nv 17), V2-S en az yanlış alarm veren ikinci model.
+**Bitiş kuralı (hangisi önce gelirse):**
+- **Hedef tuttu:** 5-fold CV'nin fold dışı (OOF) tahminlerinde macro F1 ve balanced accuracy, ikisi de baseline + 0.02. Baseline ölçülünce hedef bir kez mutlak sayıya çevrilip kilitlenir.
+- **Bütçe bitti:** baseline CV dışında en fazla 3 deney.
+- Koruma şartı: melanom recall baseline'ın altına düşmeyecek.
 
-Altyapı: Eğitim artık **Kaggle**'da (haftada ~30 saat ücretsiz GPU, arka planda
-çalışır). Mac'te `~/.kaggle/kaggle.json` kurulu; Claude notebook'u gönderip
-sonucu kendisi çekiyor. Swin Kaggle'da epoch başına ~1.7 dk sürdü (toplam ~40
-dk); Colab'da benzer modeller ~5 dk/epoch sürüyordu, Colab'ın 2 CPU'su veri
-yüklemede darboğaz olmuş olabilir. Colab notebook'u yedek olarak duruyor.
+**Deney kuralı:** tek değişiklik; kabul kriteri önceden yazılır (5 fold'un en az 4'ünde daha iyi ve ortalama fark > 0.01); CV'de en iyi epoch seçilmez, son epoch alınır; sonuç ne çıkarsa kaydedilir.
 
-## Sıradaki adım (tek, somut)
-**Ensemble tamamlandı (2026-10-13), `baselines/ensemble_v1/`.** Augmentation v2
-(kare-sonra-kırp + ±180°) ConvNeXt'te denendi, iyileşme yok, v1'de kalındı
-(`baselines/convnext_tiny_aug_v2/`).
+**Sıra ve durum:**
+1. v1'i kapat
+   - [x] En iyi ağırlıkları Drive `archive/`'a yedekle (22k seed 42, seed 2, seed 2 EMA; MD5 eşleşti, 2026-11-12)
+   - [x] `.gitignore`: `baselines/*/*.pt`
+   - [x] Bölme dosyası git'te: `splits/ham10000_lesion_split_v1.csv` (MD5 `a5e29e8b4186db15209b31715fa3a94a`). `validate_manifest.py` üretilen bölme bundan saparsa hata veriyor.
+   - [ ] Final tarifi val'de dondur (`baselines/final_v1/`)
+   - [ ] AUC ekle, iç test ve dış test tek ölçüm
+   - [ ] README ve EXPERIMENTS.md
+2. Baseline 5-fold CV (~5 saat Kaggle); hedef burada kilitlenir
+3. Temiz dış test setini ayır (deneylerden önce)
+4. Deney 1: düzeltilmiş ek veri
+5. Deney 2: alan ön eğitimi (sızıntı kontrolünü geçerse)
+6. Deney 3: serbest
+7. Final: 5 fold ortalaması, iç test ve dış testte birer ölçüm
 
-**Yol haritası (2026-10-15, kullanıcıyla kararlaştırıldı, sırayla):**
-1. ~~TTA~~ (2026-10-15, **kabul edilmedi**): 4 çevirme bakışı. Tek modellere küçük katkı
-   (ConvNeXt +0.008), ama kalibre 4'lü ensemble'da validation F1 0.768 → 0.757 (bootstrap'te
-   %94 daha kötü). Ensemble zaten ortalama aldığı için TTA'nın katkısı üst üste binmiyor.
-   `cache_predictions.py --tta`, `ensemble_val.py --tta-study`.
-2. ~~Metadata füzyonu~~ (2026-10-15, **kabul edilmedi**): eğitim setinde yaş/cinsiyet/yer
-   lojistik regresyonu, ensemble ile log-olasılık toplamı (`metadata_fusion.py`). Metadata tek
-   başına bilgi taşıyor (val log loss 0.908, bilgisiz tahmin 1.112) ama ensemble'a ekleyince
-   hiçbir alfa F1'i artırmadı (alfa ≥ 0.75'te belirgin düşüş). Muhtemel sebep: görüntü modelleri
-   yaş/yer ipuçlarını görüntüden zaten alıyor, metadata aynı bilgiyi ikinci kez sayıyor.
-   Uyarılar: `dx_type` leakage (teşhis yöntemi = cevap); "trunk" etiketi kaynak izi taşıyor.
-3. ~~ConvNeXt @384px~~ (2026-10-15, `baselines/convnext_tiny_384_v1/`): tek model olarak
-   validation'da büyük sıçrama (F1 0.744 → 0.769), ama ensemble'a girince gürültüyü aşan bir
-   kazanç yok, **ensemble_v1 değişmedi**. Testte tek model F1 0.771 (224: 0.774): validation'daki
-   sıçrama tekrarlanmadı.
-4. ~~Dış test setini belirle ve kenara ayır~~ (2026-10-16): ISIC 2018 Task 3 resmi test seti,
-   `external_test/` (kurallar README'de, `validate_manifest.py` çakışmada hata verir).
-5. ~~Ek veri~~ (2026-10-16, **durduruldu**): ISIC 2019 HAM dışı 14885 görüntü sadece train'e
-   (`add_isic2019.py`, `baselines/convnext_tiny_isic2019_v1/`). ConvNeXt tek model val'de +0.02,
-   ensemble'a katkı yok; testte daha kötü (F1 0.744, 224'ün 0.774'ü), melanom ve akiec recall
-   düştü (model "nv"ye kaydı; akiec'in anlamı değişti; farklı hastane). Kullanıcı kararıyla ek
-   veri hattı şimdilik durduruldu; README'de ileride denenebilecek düzeltmeler var.
-**Tarif v2 denemesi (2026-10-17, Kaggle Version 5) GEÇERSİZ:** finetune lr 1e-4 + warmup + cosine +
-label smoothing 0.1. val_f1 0.657 (eski tarif 0.744). Sebep tarif değil, bir kod hatası: PyTorch'un
-CrossEntropyLoss(weight, label_smoothing) sınıf ağırlıklarını smoothing payına da uyguluyor; nv görüntüsünde
-df olasılığını artırmak loss'u düşürüyordu (model nadir sınıfları her yerde tahmin etti). Düzeltme:
-`WeightedLabelSmoothingCE` (ağırlık sadece gerçek sınıfa). **Düzeltilmiş tarif (Version 6,
-`baselines/convnext_tiny_recipe2_v1/`): tek model val F1 0.744 → 0.766, kalibrasyon T 1.47 → 0.92,
-eğitim sonda oturuyor.** Ensemble'a eski ConvNeXt yerine girince 0.768 → 0.780 (gürültü eşiği altında).
-**ConvNeXt-T ImageNet-22k + 384px + tarif v2 (2026-10-19, Kaggle Version 9, P100,
-`baselines/convnext_tiny_in22k_384_v1/`): en iyi tek model.** Val F1 0.803 (son 5 epoch ort.
-0.788; 224 tarif v2: 0.745), T 0.93. Tek başına 4'lü ensemble'dan iyi (0.794 vs 0.768, %94)
-ama melanomda zayıf (mel recall 0.647; aynı recall için daha çok yanlış alarm). Gürültü eşiği
-aşılmadı + melanom gerilemesi: **ensemble_v1 değişmedi.**
-**Yön değişikliği (2026-10-19, kullanıcı kararı):** önce TEK modeli en iyi hale getir; 5-fold CV
-pahalı, ertelendi (gerekirse ensemble yerine tek modelle devam). Final model tarif donunca
-train+val ile, cosine planının tamamı (30 epoch) koşulup son epoch alınarak eğitilecek.
-**0. adım (bedava, val, aynı model):** test çözünürlüğü 416/448/512 ve flip TTA hiçbirini
-iyileştirmedi (416: +0.000, 448: −0.002, 512: −0.004, 384 TTA: −0.014 / %3). Çözünürlük arttıkça
-mel recall düştü (0.647 → 0.529). 384'te kalınıyor, TTA yok.
-**Tiny seed 2 + EMA ve Small + EMA (2026-10-20, paralel Kaggle koşuları, ikisi de T4'e düştü;
-`baselines/convnext_tiny_in22k_384_seed2_ema/`, `baselines/convnext_small_in22k_384_v1/`):**
-- Ölçüm cetveli: sadece seed değişince son 5 epoch F1 0.013, mel recall 0.11 oynuyor.
-- EMA: F1 aynı, NLL ve melanom ayırma biraz daha iyi, zıplamalar yok → tarife eklendi (`--ema-decay 0.999`).
-- Small: gürültü içinde (son 5 epoch 0.780, Tiny 0.788/0.775), 1.6 kat pahalı → kabul edilmedi.
-- 2 Tiny seed ortalaması melanom ayırmada ensemble_v1 seviyesinde (73 / 70 alarm).
-**Sıradaki karar (kullanıcıyla):** ek veri (melanom için), final eğitim (train+val, EMA, son epoch),
-gerekirse 2-3 seed Tiny.
-**Proje 2026-10-17'de `~/Projeler/skin-cancer-detection`'a taşındı** (Masaüstü iCloud'du, kota dolu,
-dosyalar okunamıyordu). Kaggle CLI: `~/.local/kaggle-cli/bin/kaggle`.
+**Sıradaki tek adım:** final tarifi yalnızca val ile dondurmak (`baselines/final_v1/README.md`), test ölçümünden önce commit.
 
-6. ~~Dış doğrulama~~ (2026-10-16, ilk ölçüm, `baselines/ensemble_v1/external_isic2018_test/`):
-   ensemble_v1, ISIC 2018 resmi test seti (1512). macro_f1 0.749, balanced_accuracy 0.765
-   (kendi testimizde 0.809: ~4.5 puan iyimsermiş), mel_recall 0.749; tarama modu mel_recall 0.842.
-   Ensemble en iyi tek modelden +0.02 F1. Yarışmanın ek verisiz en iyisi 0.845: fark ~8 puan.
-   Bu sete artık bakıldı: yeni tarifler yine validation'da seçilir, burada sadece bir kez ölçülür
-   ve "daha önce bakılmış set" diye raporlanır.
-7. **Arayüz** (doktor fotoğraf yükler, sonuç alır).
+---
 
-Her yeni tarif validation'da seçilir, test setinde bir kez ölçülür. Yeni bir model
-eklenirse: `cache_predictions.py` → `ensemble_val.py` → `ensemble_test.py`.
+## 0. Son rapordan bu yana değişenler
 
-Kaggle döngüsü (yeni bir model eğitmek gerekirse):
-1. [kaggle/skin-cancer-train.ipynb](kaggle/skin-cancer-train.ipynb) ilk hücresinde
-   `ARCHITECTURE`'ı değiştir, kodu GitHub'a gönder.
-2. `kaggle kernels push -p kaggle` (Mac'te, SSL için `SSL_CERT_FILE` certifi'ye
-   ayarlı). İlerleme: https://www.kaggle.com/code/yunusemreozkan/skin-cancer-train
-3. Bitince `kaggle kernels output yunusemreozkan/skin-cancer-train -p <klasör>`
-   → `baselines/<model adı>/` + Drive `archive/<model adı>/`.
+- **Önceki `PROJECT_STATUS.md` bir denetim raporu değildi.** Geliştirme ajanının durum dosyasıydı ve en son 2026-10-20 21:19'da güncellenmişti. Eski içerik git'te duruyor: `git show e01dec2:PROJECT_STATUS.md`. İçindeki operasyonel kurallar bu raporun sonundaki **Ek**'e taşındı.
+- **Önceki sıradaki adım yapılmadı.** Eski dosya tek bir adım yerine üç seçenek bırakmıştı: ek veri, train+val ile final eğitim, 2-3 seed Tiny. Üçü de yapılmadı. 20 Ekim'den bu yana **hiç commit yok.**
+- **Yeni dosyalar:** `AGENT_REPORT.md` eklendi (23 Ekim tarihli, git'te değil). Small ve seed 2 klasörlerinde takip edilmeyen dosyalar duruyor (`test_metrics.json`, `confusion_matrix.png`, `best_model_ema.pt`).
+- **Yeni sapma:** Kod tarafında yok. Ancak 6 gündür ilerleme de yok, ve `AGENT_REPORT.md`'deki 26 maddelik "hiç denenmedi" listesi savrulmanın sürmesi için hazır bir menü.
 
-Henüz başlanmayan diğer fikirler: mel-threshold ayarı, TTA (test-time
-augmentation), kalibrasyon, metadata füzyonu (yaş/cinsiyet/lezyon konumu —
-HAM10000'de var ama kullanılmıyor), dış veri ve ConvNeXt'i 384px'te yeniden
-eğitmek (ikisi için aşağıdaki "Sonraya bırakılan konular"a bak).
+---
 
-**Ensemble'dan sonraki iyileştirme sırası:** Önce modelleri düz ortalama ile
-birleştir → sonra **entegrasyonun kendisini** ince ayarla (ağırlıklı ortalama,
-sınıf-bazlı ağırlık, kalibrasyon — hiçbiri yeniden eğitim istemiyor) →
-**ancak hâlâ yetersizse ve zayıf halka netse**, son çare olarak tek bir
-mimariyi yeniden eğit.
+## 1. Tek Paragrafta Durum
 
-Dikkat: ensemble ağırlıkları ve hangi modellerin dahil edileceği
-**validation** setinde seçilmeli, test seti sadece en sonda bir kez
-kullanılmalı. Test setine bakarak seçim yaparsak sonuç iyimser çıkar
-(leakage). Seçim `ensemble_val.py`'de (validation), tek ölçüm `ensemble_test.py`'de.
+Modelleme fiilen bitti; eksik olan kapanış ve paketleme. Elinde sızıntısız, lezyon bazlı ve doğrulanabilir bir bölme var. Bu bölmede ConvNeXt-Tiny (ImageNet-22k, 384px, tarif v2) iki kez eğitildi. İç test setinde (986 görüntü) sonuçlar:
 
-## Sonraya bırakılan konular (2026-10-11'de konuşuldu, karar verilmedi)
-- **Kıyas hedefi (ISIC 2018, balanced accuracy):** Ek veri kullanmayanların
-  en iyilerinden Zhuang ve ark. 0.845 (senin paylaştığın Sun Yat-sen raporu:
-  SENet-154 + PNASNet ensemble). Birinci MetaOptima 0.885, ama ~37.800 ek
-  görüntüyle. Gerçekçi hedef (tahmin): ek verisiz 0.82-0.85. Test setleri
-  farklı olduğu için kıyas yaklaşık; 1-2 puanlık farklar gürültü olabilir.
-- **Daha büyük model / ücretli A100:** Büyüklük ana kaldıraç değil (8 bin
-  görüntüde 20-28M parametreli modellerimiz bile ezberliyor). Sıra: ensemble
-  → çözünürlük (ConvNeXt-T @384, T4'te ~3 saat) → hâlâ gerekirse büyük model
-  (A100'de en verimli aday EfficientNetV2-M @480). 3 saati geçecek ilk
-  koşudan önce koda "kaldığı yerden devam" özelliği eklenmeli.
-- **Ek veri:** Ek verisiz ensemble bittikten sonra. Önce tek modelle dene:
-  ConvNeXt-T + ISIC 2019'un HAM10000 dışındaki ~15 bin görüntüsü, sonuç
-  `convnext_tiny_v1` ile aynı val/test'te karşılaştırılır. **Dikkat:** ISIC
-  2019 HAM10000'in tamamını içeriyor; tekrarlar temizlenmezse test
-  görüntüleri eğitime girer. Yarı yolda karıştırma yok (bir model ek verili,
-  diğerleri ek verisiz olmaz).
-- **Dış doğrulama (projenin en sonunda, bir kez):** Kullanıcı farklı kaynaktan
-  bir test seti istiyor (HAM10000 test seti aynı klinik/cihazlardan). En iyi
-  aday ISIC 2018 resmi test seti (~1500 görüntü): 0.845 ile aynı sette kıyas
-  sağlar. Etiketler ISIC veri sayfasında olabilir ya da tahminler ISIC canlı
-  leaderboard'una yüklenir (o aşamada kontrol et). **Kural:** dış test seti
-  ek veriden ÖNCE belirlenip kenara ayrılmalı; ek veri (ör. ISIC 2019) bu setle
-  çakışan görüntülerden temizlenmeli. Skorların düşmesi beklenir.
-- **Ensemble'da kalibrasyon:** ConvNeXt ve V2-S aşırı özgüvenli (val_loss
-  dipten sonra yükseliyor). Olasılık ortalamasında daha emin konuşan model
-  kazandığı için, ortalamadan önce her modeli validation setinde temperature
-  scaling ile kalibre etmek değerlendirilecek.
+| | macro F1 | balanced accuracy |
+|---|---|---|
+| Seed 42 | 0.818 | 0.809 |
+| Seed 2 | 0.821 | 0.830 |
 
-## Drive
-Google Drive masaüstü uygulaması kurulu. Yol: `~/Library/CloudStorage/
-GoogleDrive-emreozkan877@gmail.com/Drive'ım/skin-cancer-detection-runs/`
-- `latest/`: Colab her koşuda buraya yazar, **bir önceki koşunun üzerine**.
-  Claude sonuçları buradan okur.
-- `archive/<model adı>/`: büyük ağırlıkların kalıcı kopyası (adlar
-  `baselines/` ile aynı). Bir sonuç kaydedilirken Claude buraya kopyalar.
+**Hedeflere göre durum:**
+- **F1 hedefi (0.81–0.82):** İç testte karşılanıyor.
+- **BA ≥ 0.85 hedefi:** Karşılanmıyor. Bu test setinin gürültüsüyle güvenilir şekilde ölçülebilir bir hedef de değil (bkz. 9.1).
 
-Notlar: Dosyalar Mac'e bazen ancak Drive uygulaması ya da Finder'da Google
-Drive açılınca iner. Komut satırından ilk erişimde "Operation timed out"
-alınırsa yine Finder'dan Google Drive'a bir kez tıklamak çözüyor.
+15 Ekim'den bu yana 11 değişiklik denendi. Bunlardan yalnızca biri, "22k ön eğitim + 384px + tarif v2" kombinasyonu, net ve kalıcı kazanç getirdi; diğerleri gürültü içinde kaldı veya kötüleştirdi. Yani verim eğrisi düzleşmiş durumda.
 
-## Unutulmaması gereken kurallar
-- `deri-kanseri-cnn-uygulamas.ipynb` dosyasına **asla dokunma** (senin ayrı,
-  ilgisiz referans notebook'un — stage/commit edilmeyecek)
-- Git'e dosya eklerken her zaman dosya adıyla (`git add <dosya>`), asla
-  `git add -A` kullanılmıyor (yukarıdaki dosyayı yanlışlıkla eklememek için)
-- Colab'da uzun eğitim koşarken sekmeyi arka planda bırakma / bilgisayarı
-  uykuya alma — runtime koptu/sıfırlandı, birkaç kez bu yüzden ilerleme kaybettik
-- Colab notebook'unu her zaman yukarıdaki GitHub linkinden aç. Drive'a ya da
-  Colab'a kaydedilmiş bir kopyanın hücreleri donmuş kalır: `git clone` sayesinde
-  kod güncel gelir ama eğitim komutu eski kalabilir. Bir kez yanlış mimariyle
-  (sessizce EfficientNet-B0'a düşerek) eğitime başlamıştık
-- 50MB üstü ağırlıklar git'e girmiyor (`.gitignore`: `baselines/*/best_model.pt`);
-  yerel disk + Drive `archive/` olmak üzere iki kopya tutuluyor
+Bitirmek için yeni eğitim gerekmiyor. Gereken dört iş:
+1. Final modeli val'de dondurmak.
+2. Onu bir kez ölçmek.
+3. Ağırlıkları güvenceye almak (en iyi model şu an tek kopya).
+4. Repoyu belgelemek.
+
+---
+
+## 2. Tamamlanan ve Doğrulanan İşler [TAMAMLANDI]
+
+1. **Veri hattı ve sızıntısız bölme.** Kod: `src/data/build_manifest.py`, `split_manifest.py`, `validate_manifest.py`. Kontrolümde `data/processed/manifest.csv` üzerinde:
+   - 10.015 görüntü, 7.470 lezyon.
+   - Birden fazla bölmeye düşen lezyon: **0**. Tekrarlanan `image_id`: **0**.
+   - Metadata ile lezyon ve etiket uyuşmazlığı: **0**.
+   - Bölme boyutları 8037 / 992 / 986. Etikete göre katmanlı, `random_state` 42.
+2. **Bölme koşular arasında tutarlı.** Kaggle her koşuda bölmeyi yeniden üretiyor. Buna rağmen 16 `predictions*.npz` dosyasının hepsinde val ve test `image_id` kümeleri yerel manifestle birebir aynı, etiketler de tutarlı.
+3. **Eğitim scripti:** `src/training/train.py`. Kontrol edilen noktalar:
+   - Augmentation yalnızca train setine uygulanıyor (`build_transforms(train=True)` sadece `train_dataset`'te).
+   - Gray-World ve ImageNet normalizasyonu bütün bölmelerde aynı.
+   - Sınıf ağırlıkları yalnızca train'den hesaplanıyor.
+   - En iyi checkpoint val F1'e göre seçiliyor.
+   - `WeightedLabelSmoothingCE` hatası doğru teşhis edilip düzeltilmiş (`8cd99e7`).
+4. **10 eğitilmiş modelin kayıtları:** `baselines/*/metrics.json`, `training_history.json`, `predictions.npz`. 8 modelin `test_metrics.json` dosyası var.
+5. **Metrik standardı:** `src/evaluation/evaluate.py` şunları üretiyor: macro F1, balanced accuracy, macro precision, sınıf bazında P/R/F1, melanom recall ve precision, confusion matrix, bootstrap ile %95 güven aralığı. Accuracy yalnızca bilgi amaçlı. Eksik olan tek metrik AUC (bkz. Kırmızı Bayrak D2).
+6. **ensemble_v1: val'de seçildi, testte bir kez ölçüldü.**
+   - Val değerlerini yeniden hesapladım, birebir aynı çıktı: F1 0.768, BA 0.793, melR 0.814. T değerleri de aynı: 0.88 / 1.47 / 1.11 / 1.41.
+   - Test sonuçları `baselines/ensemble_v1/test_metrics_*.json` dosyalarında.
+7. **Dış doğrulama (ensemble_v1, ISIC 2018 Task 3, 1512 görüntü):** F1 0.749, BA 0.765.
+   - Kanıt: `baselines/ensemble_v1/external_isic2018_test/*.json`.
+   - Etiket dosyasının MD5'i (`c6b7b4dd…`) README'deki değerle eşleşiyor.
+8. **Val'de verilen ret kararları yeniden üretilebiliyor.** Aşağıdakilerin hepsi repodaki scriptlerle aynı sayıları verdi:
+   - TTA: ensemble 0.768 → 0.757.
+   - Metadata füzyonu.
+   - Aday modeller: 1k-384, ISIC 2019, tarif v2, 22k-384.
+   - Ensemble ağırlık çalışması.
+9. **Seed cetveli (sadece seed değişince ne kadar oynuyor):**
+   - Son 5 epoch F1: 0.788 ve 0.775 (fark 0.013).
+   - Val melanom recall: 0.647 ve 0.755 (fark 0.108).
+   - Kanıt: `training_history.json` ve `predictions.npz`.
+10. **"En iyi sonuç" bir dosyada gerçekten var:** `baselines/convnext_tiny_in22k_384_v1/test_metrics.json` → macro_f1 0.8176, BA 0.8094.
+11. **Sızıntı korumaları kodda var:**
+    - `validate_manifest.py`, aynı lezyon iki bölmeye düşerse ya da dış test görüntüsü karışırsa hata veriyor.
+    - `tune_threshold.py` yalnızca val setini kullanıyor.
+    - `ensemble_test.py` ve `external_validation.py` T değerlerini yalnızca val'den alıyor.
+
+---
+
+## 3. Denenen, Yarım Kalan veya Terk Edilenler [YARIM]
+
+| Ne denendi | Sonuç | Neden bırakıldı / durum |
+|---|---|---|
+| Focal loss (`0adf7cf`, `b69508b`) | Sonuç dosyası yok | 2 saat sonra notebook CE'ye döndü (`70815f2`). Terk edildi. |
+| Checkpoint ensemble scripti (`f5cabe8`, 8 Ekim). Test setinde olasılık ortalaması alıyordu. | Kullanılıp kullanılmadığı doğrulanamadı | 15 Ekim'de silindi (`64305ff`). **AGENT_REPORT'ta hiç geçmiyor.** |
+| Augmentation v2 | Val F1 0.731 (v1: 0.744) | Terk edildi (makul). Test Kaggle'da hesaplandı ama indirilmedi; ağırlıklar indirilmedi. |
+| Ek veri (ISIC 2019) | Val'de hafif artış, testte F1 0.744 (−0.03) | "Durduruldu, sonra doğru şekilde denenecek" denilerek açık uçlu bırakıldı. |
+| ConvNeXt 1k @384 | Val'de iyi, ensemble'a girmedi; testte 224 ile aynı | Terk edildi. |
+| Tarif v2'nin ilk koşusu (PyTorch label smoothing hatası) | Val F1 0.657 (yalnızca metinde) | Hata bulundu ve düzeltildi. Metrik dosyası yok. |
+| EMA (`--ema-decay`) | Son 5 epoch F1 değişmedi. En iyi EMA checkpoint'i ham modelden düşük (0.784 / 0.799). | "Tarife eklendi" deniyor, ama hiçbir final aday EMA kullanmıyor. **Belirsiz.** |
+| ConvNeXt-Small | Val'de gürültü içinde, 1.6 kat maliyet | Reddedildi. 198MB'lık iki ağırlık yerel diskte duruyor. |
+| 2 seed ortalaması (s42 + s2) | Val F1 0.793, BA 0.795, melR 0.696 (yeniden hesaplandı) | **Final kararı verilmedi.** Testte ölçülmedi. |
+| Test çözünürlüğü 416/448/512 ve 22k modelinde flip TTA | "Kazanç yok" | Yalnızca eski PROJECT_STATUS metninde. Çıktı dosyası yok. `cache_predictions.py`'de çözünürlük seçeneği de yok, yani nasıl üretildiği repodan izlenemiyor. |
+| ensemble_v1 "en iyi sonuç" olarak | 19 Ekim yön değişikliğiyle fiilen emekliye ayrıldı | `README.md` hâlâ onu en iyi sonuç diye gösteriyor. |
+| Erken dönem (4–8 Ekim): ilk yerel B0, cosine, melanom eşiği 0.256, Colab uzun eğitim | Sayılar yalnızca AGENT_REPORT'ta (kaynağı sohbet) | Repoda dosya yok. Kod parçaları var (`--scheduler cosine`, `tune_threshold.py`). |
+
+---
+
+## 4. Planlanmış Ama Başlanmamış İşler [PLAN]
+
+Kaynaklar: `AGENT_REPORT.md` 3. bölüm ve eski PROJECT_STATUS. Hiçbirinin kodu veya çıktısı yok, ya da yalnızca altyapısı var.
+
+- **Değerlendirme ve protokol:**
+  - 5-fold CV
+  - ISIC 2018 resmi val seti (193 görüntü)
+  - "ISIC modu" karar kuralı
+  - Final melanom eşiği ve çalışma noktalarının seçimi
+  - Yeni modelin dış testi
+  - AUC metrikleri
+- **Final eğitim:**
+  - train+val ile 30 epoch, son epoch alınacak (kodda yalnızca `last_model_ema.pt` kaydı var)
+  - 2-3 seed final
+  - Kaldığı yerden devam (resume) özelliği
+- **Tarif denemeleri:**
+  - Tarif v3 (head lr 1e-3, weight decay 0.05, layer decay)
+  - Mixup / CutMix
+  - Melanom sınıf ağırlığını artırmak
+  - Logit adjustment
+  - Karekök sınıf ağırlığı ve oversampling
+  - Kademeli unfreezing ve katman bazlı LR
+  - Multi-crop
+  - 448px'te yeniden eğitim
+- **Model ve veri:**
+  - EfficientNetV2-M @480 / A100
+  - ensemble_v2 (V2-S ve Swin'i tarif v2 ile yeniden eğitmek)
+  - Ek veriyi doğru şekilde yeniden denemek (5 alt madde)
+- **Sunum:** Grad-CAM, EDA, doktor arayüzü.
+
+---
+
+## 5. Deney Tablosu
+
+Okuma notları:
+- **Val:** Eğitim sırasında Kaggle/Colab'da (AMP ile) en iyi epoch'ta ölçülen değer, `metrics.json`'dan. "son5" = son 5 epoch ortalama F1, `training_history.json`'dan.
+- **Mac:** Aynı checkpoint'in Mac'te (fp32) `predictions.npz` ile yeniden hesaplanmış değeri (bkz. bayrak O3).
+- **Test:** İç test seti, 986 görüntü.
+
+| # | Deney | Model / Mimari | Önemli ayarlar | Val | Test | Kanıt dosyası |
+|---|---|---|---|---|---|---|
+| 1 | İlk yerel model | B0 224 | wCE, 15 epoch | F1 0.572 · BA 0.709 (beyan) | F1 0.633 · BA 0.725 (beyan) | **Yok** |
+| 2 | Cosine scheduler | B0 224 | Her faz için ayrı cosine | F1 0.513 (beyan) | – | **Yok** |
+| 3 | Melanom eşiği 0.256 | B0 224 | Val'de recall ≥ 0.85 hedefi | – | Beyan | **Yok** |
+| 4 | Colab uzun eğitim | B0 224 | Dedup öncesi (görüntüler 2 kez sayıldı) | F1 0.709 (beyan) | F1 0.722 (beyan) | **Yok** |
+| 5 | Focal loss | B0 224 | γ=2 + sınıf ağırlığı | – | – | Yalnızca kod |
+| 6 | baseline_v1 | B0 224 | aug v1 + Gray-World + wCE, 5+20 epoch | F1 0.635 · BA 0.707 · son5 0.616 | F1 0.698 · BA 0.762 · melR 0.626 | `baselines/baseline_v1/` |
+| 7 | convnext_tiny_v1 | ConvNeXt-T 1k 224 | #6 ile aynı | 0.744 · 0.761 · son5 0.733 | 0.774 · 0.798 · melR 0.766 | `baselines/convnext_tiny_v1/` |
+| 8 | efficientnet_v2_s_v1 | V2-S 384 | #6 ile aynı | 0.749 · 0.776 · son5 0.738 | 0.753 · 0.781 · melR 0.710 | `baselines/efficientnet_v2_s_v1/` |
+| 9 | swin_v2_t_v1 | Swin V2-T 256 | #6 ile aynı; early stopping epoch 21'de | 0.732 · 0.779 · son5 0.719 | 0.755 · 0.813 · melR 0.626 | `baselines/swin_v2_t_v1/` |
+| 10 | ensemble_v1, normal | #6 + #7 + #8 + #9 | Val'de T kalibrasyonu, eşit ağırlık | Mac: 0.768 · 0.793 · melR 0.814 | 0.783 · 0.809 · melR 0.692 | `baselines/ensemble_v1/` |
+| 11 | ensemble_v1, tarama | Aynı | Melanom olasılığı ≥ 0.30 ise mel | F1 0.746 · melR 0.882 (README) | 0.781 · 0.823 · melR 0.888 | `baselines/ensemble_v1/` |
+| 12 | Augmentation v2 | ConvNeXt-T 224 | Kareye sıkıştır sonra kırp, ±180° döndürme | 0.731 · 0.774 · son5 0.711 | Hesaplandı, indirilmedi | `baselines/convnext_tiny_aug_v2/` |
+| 13 | Flip TTA | 4 model + ensemble | 4 çevirme bakışı | Ensemble 0.768 → 0.757 | – | `predictions_tta.npz`, `--tta-study` |
+| 14 | Metadata füzyonu | Ensemble + lojistik regresyon | Yaş, cinsiyet, konum | Hiçbir α değeri F1'i artırmadı | – | `metadata_fusion.py` |
+| 15 | convnext_tiny_384_v1 | ConvNeXt-T 1k 384 | Eski tarif | 0.769 · 0.812 · son5 0.760 | 0.771 · 0.784 · melR 0.664 | `baselines/convnext_tiny_384_v1/` |
+| 16 | convnext_tiny_isic2019_v1 | ConvNeXt-T 224 | +14.885 ISIC 2019 görüntüsü (yalnızca train) | 0.760 · 0.759 · son5 0.742 | 0.744 · 0.751 · melR 0.626 | `baselines/convnext_tiny_isic2019_v1/` |
+| 17 | Dış test | ensemble_v1 | ISIC 2018 test seti, 1512 görüntü | – | Dış: F1 0.749 · BA 0.765 · melR 0.749. Tarama: 0.729 · 0.757 · melR 0.842 | `baselines/ensemble_v1/external_isic2018_test/` |
+| 18 | Tarif v2 hatalı koşu (Kaggle V5) | ConvNeXt-T 224 | PyTorch label smoothing + sınıf ağırlığı birlikte | F1 0.657 (metin) | – | Yalnızca metin |
+| 19 | convnext_tiny_recipe2_v1 | ConvNeXt-T 224 | lr 1e-4, warmup + cosine, label smoothing 0.1, 25 epoch | 0.766 · 0.756 · son5 0.745 | Bakılmadı (logit'ler dosyada) | `baselines/convnext_tiny_recipe2_v1/` |
+| 20 | **convnext_tiny_in22k_384_v1** | **ConvNeXt-T 22k 384** | Tarif v2, drop_path 0.1, seed 42 | **0.803** · 0.798 · son5 **0.788** (Mac F1 0.794) | **0.818 · 0.809 · melR 0.664** | `baselines/convnext_tiny_in22k_384_v1/` |
+| 21 | Test çözünürlüğü / TTA | #20 | 416 / 448 / 512 | Beyan: kazanç yok | – | **Yok** |
+| 22 | Seed 2 | #20 ile aynı | seed 2 (EMA kopyası eğitimi etkilemiyor) | 0.799 · 0.812 · son5 0.775 (Mac 0.807) | 0.821 · 0.830 · melR 0.729 | `baselines/convnext_tiny_in22k_384_seed2_ema/` (test dosyası git'te değil) |
+| 23 | Seed 2, EMA kopyası | #22 | decay 0.999 | 0.784 · 0.800 · son5 0.775 | Logit'ler dosyada, raporlanmadı | `metrics_ema.json`, `predictions_ema.npz` |
+| 24 | ConvNeXt-Small | ConvNeXt-S 22k 384 | drop_path 0.2, seed 42 | 0.801 · 0.802 · son5 0.780 | 0.816 · 0.829 · melR 0.682 | `baselines/convnext_small_in22k_384_v1/` (test dosyası git'te değil) |
+| 25 | Small, EMA kopyası | #24 | decay 0.999 | 0.794 · 0.799 · son5 0.781 | Logit'ler dosyada, raporlanmadı | `metrics_ema.json`, `predictions_ema.npz` |
+| 26 | 2 seed ortalaması | #20 + #22 | Val'de T kalibrasyonu | Mac: 0.793 · 0.795 · melR 0.696 | Ölçülmedi | Yeniden hesaplandı |
+| 27 | Checkpoint ensemble | ? | Test setinde ortalama | – | ? | `f5cabe8` (silindi) |
+
+---
+
+## 6. Ajan Beyanı ve Kanıt Karşılaştırması
+
+| Ajanın iddiası (`AGENT_REPORT.md`) | Repodaki kanıt | Durum |
+|---|---|---|
+| Lezyon bazlı, katmanlı bölme; 8037/992/986; random_state 42 | `split_manifest.py`; kontrolümde çakışan lezyon 0 | Doğrulandı |
+| Tekrarlanan görüntü düzeltmesi; Colab'da test 1972 görüntüydü | Dedup kodu `build_manifest.py`'de var. "1972" yalnızca eski PROJECT_STATUS metninde geçiyor. | Kısmen |
+| İlk yerel B0 (0.572/0.633) ve Colab uzun eğitim (0.709/0.722) | Dosya yok | **Kanıt yok** |
+| Cosine (val 0.513) ve melanom eşiği 0.256 | Kod var, sonuç dosyası yok | **Kanıt yok** |
+| Focal loss, "sonuç kayıtlı değil" | `0adf7cf`, `70815f2` | Doğrulandı |
+| baseline_v1, ConvNeXt-T 224, V2-S, Swin değerleri | İlgili `metrics.json` ve `test_metrics.json` dosyaları | Doğrulandı |
+| T değerleri: B0 0.88, ConvNeXt 1.47, V2-S 1.11, Swin 1.41 | Yeniden hesaplandı | Doğrulandı |
+| ensemble_v1 normal ve tarama değerleri | Val birebir yeniden hesaplandı; test JSON'ları var | Doğrulandı |
+| Dış test F1 0.749, BA 0.765; "~4.5 puan iyimser" | JSON var; 0.809 − 0.765 = 0.044 | Doğrulandı |
+| Tarif v2: val F1 0.766, son5 0.745, T 1.47 → 0.92 | `metrics.json` ve history; T yeniden hesaplandı: 0.92 | Doğrulandı |
+| 22k+384: val F1 0.803, test F1 0.818 | JSON'lar var | Doğrulandı. Not: aynı model Mac'te val F1 0.794 veriyor. |
+| Seed 2: test F1 0.821, "karar sonrası görüldü" | Sayılar doğru. Ama test dosyası, karar commit'inden 7 dakika önce (21:12) diskteydi. | Sayılar doğrulandı, **zamanlama doğrulanamadı** |
+| Small: test F1 0.816, "karar sonrası görüldü"; 1.6× maliyet | Sayılar doğru; epoch süresi 3.33 / 2.14 dk. Test dosyası 20:35'ten beri diskte, karar 21:19. | Sayılar doğrulandı, **zamanlama doğrulanamadı** |
+| Ölçüm cetveli: F1 ~0.013, melR ~0.11 | 0.788 − 0.775 ve 0.755 − 0.647 | Doğrulandı |
+| EMA "F1'i artırmadı" | Son 5 epoch ortalaması 0.775 ve 0.775 | Doğrulandı |
+| EMA test: "Ölçülmedi" | `predictions_ema.npz` dosyaları test logit'lerini içeriyor. Yani test hesaplandı, sadece raporlanmadı. | **Çelişiyor** (ifade yanlış) |
+| 2 seed ortalaması: val 0.793 / 0.795 / 0.696 | Yeniden hesaplandı | Doğrulandı |
+| Augmentation v2, 1k-384, ISIC 2019 değerleri | JSON'lar var | Doğrulandı |
+| Flip TTA ensemble: 0.768 → 0.757 | `--tta-study` yeniden çalıştırıldı | Doğrulandı |
+| Flip TTA, 22k model: 0.794 → 0.780 | Bu model için `predictions_tta.npz` yok | **Kanıt yok** |
+| Daha yüksek test çözünürlüğü (416/448/512) | Dosya yok, kodda bunu yapan bir yol yok | **Kanıt yok** |
+| Metadata füzyonu | Script yeniden çalıştırıldı | Doğrulandı |
+| Tarif v2 hatalı ilk koşu: val 0.657 | Docstring ve eski PROJECT_STATUS'ta; metrik dosyası yok | Kısmen |
+| Ensemble ağırlık çalışması ve aday model yüzdeleri (%78, %93, %88, %94) | `--weight-study` ve `--candidate-study` yeniden çalıştırıldı | Doğrulandı |
+| Kalıcı karar: "Bütün seçimler val setinde yapılır" | 13 Ekim'den sonra doğru. 9–13 Ekim'de karşılaştırmalar ve yön kararları test üzerinden yapıldı: o dönemin README'lerinde val bölümü yok, `79ab6a0` test metriğine dayanıyor. | **Çelişiyor** (erken dönem için) |
+| "Dış test bir kez kullanıldı" | Yalnızca ensemble_v1 için çıktı var | Doğrulandı |
+| "Dış test MD5 ile korunuyor" | MD5 eşleşiyor | Doğrulandı |
+| "50MB üstü ağırlıklar git'e girmiyor" | `best_model.pt` ignore ediliyor, ama `best_model_ema.pt` (111–198MB) ignore edilmiyor | Kısmen |
+| Eski PROJECT_STATUS: "ağırlıklar yerel diskte + Drive archive'da" | Drive `archive/` altında yalnızca 5 klasör var. **En iyi model, seed 2, Small ve tarif2 Drive'da yok.** | **Çelişiyor** |
+| Kalıcı karar: "Final train+val ile, 30 epoch, son epoch" | Yalnızca metin | [PLAN] |
+| (Beyanda yok) Checkpoint ensemble scripti `f5cabe8` | Eklendi, sonra silindi | **Eksik beyan** |
+
+**Öne çıkan çelişkiler:**
+1. **"Bütün seçimler val'de" kuralı ilk 5 günde uygulanmadı.** Mimari karşılaştırmaları ve "en iyi referans" kararları test sonuçlarıyla verildi.
+2. **"EMA test: ölçülmedi" ifadesi yanlış.** Test logit'leri diskte duruyor, sadece okunmadı.
+3. **Ağırlıkların iki kopyası yok.** Eski durum dosyası iki kopya olduğunu söylüyordu; en iyi model için bu doğru değil.
+
+**Kanıtı olmayan iddialar:**
+- Erken dönem deneylerinin sayıları (#1–#4).
+- Tarif v2 hatalı koşusunun metrik dosyası.
+- Test çözünürlüğü denemesi.
+- 22k modelinde TTA denemesi.
+
+**Ajanın zayıf hafıza dönemi:** `AGENT_REPORT.md` böyle bir dönemi açıkça işaretlemiyor, sadece "sonuç kayıtlı değil" notları var. Kanıtsız iddiaların hepsi 4–8 Ekim aralığında toplanıyor. Bu dönemi git'ten şöyle yeniden kurdum:
+- **4 Ekim:** İlk pipeline. O zaman `configs/`, `scripts/` ve `docs/` klasörleri vardı; 15 Ekim'de silindiler.
+- **8 Ekim:** Gün boyunca dedup düzeltmesi, albumentations ve focal loss geldi. 19:41'de üç değişiklik aynı dakikada commit edildi: Gray-World, checkpoint ensemble ve CE'ye dönüş.
+- **9 Ekim:** İlk kalıcı kayıt (baseline_v1). O ana kadarki koşuların hiçbir çıktısı saklanmamış.
+
+---
+
+## 7. Kırmızı Bayraklar
+
+### Kritik
+
+**K1. İç test seti artık "temiz" bir ölçüm değil.**
+- 8 model ve ensemble için test sonuçlarına bakıldı.
+- 9–13 Ekim arasında mimari kararları doğrudan testle verildi. baseline_v1, convnext_tiny_v1, efficientnet_v2_s_v1 ve swin_v2_t_v1 README'lerinde yalnızca test karşılaştırması var. ensemble_v1 README'si bunu kendisi de söylüyor: "Validation'a göre seçseydik V2-S'i seçerdik."
+- "Önce tek model" yön kararı (`37cb0bf`, 21:52) test F1 0.818'in kaydından (`b99b532`, 20:14) 1.5 saat sonra geldi. Val de bu kararı destekliyordu, ama zamanlama test etkisini dışlamıyor.
+- İyimserliğin ölçülmüş kanıtı var: dış testte BA 0.809'dan 0.765'e düştü.
+- *Neden önemli:* Raporlayacağın iç test skorları, seçimin bir kısmı aynı sette yapıldığı için gerçek performansı abartır. Final raporda bu set "geliştirme sırasında tekrar tekrar bakılmış set" diye etiketlenmeli.
+
+**K2. En iyi modelin ağırlıkları tek kopya.**
+- Drive `archive/` altında yalnızca şunlar var: `convnext_tiny_v1`, `convnext_tiny_384_v1`, `convnext_tiny_isic2019_v1`, `efficientnet_v2_s_v1`, `swin_v2_t_v1`.
+- `convnext_tiny_in22k_384_v1`, seed 2, Small ve tarif2 yalnızca yerel diskte.
+- *Neden önemli:* Disk kaybolursa başlık sonucu birebir yeniden üretilemez, çünkü eğitim deterministik değil (bkz. O4).
+
+### Orta
+
+**O1. Dış test seti erken harcandı.**
+- `external_test/README.md`'nin kuralı: "proje kesinleştikten sonra bir kez".
+- Ama set, kenara ayrıldığı gün eski ensemble'da kullanıldı (`1667db8`, 16 Ekim 22:38). 45 dakika sonra yeni tarif çalışması başladı (`d655180`).
+- Final model bu sette "ikinci bakış" olacak.
+- *Neden önemli:* Bu set projenin tek bağımsız ölçümüydü ve "yarışma birincisinden 8 puan gerideyiz" bilgisi sonraki çalışmayı yönlendirdi.
+
+**O2. Val seti çok kez kullanıldı, nadir sınıfları çok küçük.**
+- Val'de df 12, vasc 12 görüntü. Tek bir görüntü balanced accuracy'yi yaklaşık 0.012 oynatır.
+- Aynı 992 görüntüde 20'den fazla karşılaştırma yapıldı.
+- En iyi epoch val'e göre seçildiği için raporlanan val skorları iyimser. En iyi epoch ile son 5 epoch ortalaması arasındaki fark 0.011–0.024.
+- Ajan bunu bootstrap, son-5 ortalaması ve seed cetveliyle kısmen yönetti; bu iyi bir uygulama. Ama cetvel yalnızca 2 seed'e dayanıyor.
+
+**O3. Aynı checkpoint, farklı platformda farklı skor.**
+- Kaggle (AMP fp16) `metrics.json` ile Mac (fp32) `predictions.npz` arasındaki val F1 farkları:
+
+  | Model | Kaggle | Mac |
+  |---|---|---|
+  | 22k | 0.803 | 0.794 |
+  | Seed 2 | 0.799 | 0.807 |
+  | convnext_tiny_v1 | 0.744 | 0.736 |
+
+- Fark (en fazla 0.009), seed cetveliyle (0.013) aynı büyüklükte.
+- AGENT_REPORT tablosu Kaggle sayılarını kullanıyor, kararlar ise Mac sayılarıyla verilmiş.
+- *Neden önemli:* Tek bir "resmi" sayı kaynağı yoksa raporlanan değerler birbirine karışır.
+
+**O4. Tekrarlanabilirlik boşlukları var.**
+- `requirements.txt`'de hiçbir paketin versiyonu sabit değil. Kaggle her koşuda en güncel `timm`'i kuruyor; yalnızca albumentations sabit.
+- Bölme dosyası git'te yok, her koşuda yeniden üretiliyor. Şimdilik birebir aynı çıkıyor (doğruladım), ama bu Kaggle veri setinin klasör yapısına bağlı.
+- Yalnızca `torch.manual_seed` var ve `cudnn.benchmark` açık. Aynı seed ile bit bit aynı sonuç beklenmemeli.
+- İyi tarafı: kod versiyonu çoğu README'de commit hash'iyle kayıtlı.
+
+**O5. "Teste bakılmadı" disiplini yalnızca iradeye dayanıyor.**
+- Kaggle notebook'u her koşudan sonra `evaluate` çalıştırıyor, yani test metrikleri her seferinde otomatik hesaplanıyor.
+- Her `predictions*.npz` dosyası test logit'lerini de içeriyor.
+- Small ve seed 2'nin test dosyaları diskte 20:35 ve 21:12'den beri vardı. Karar commit'i 21:19'da. README'ler "bakılmadı", AGENT_REPORT "23 Ekim'de envanter hazırlanırken görüldü" diyor. Hangisinin doğru olduğu doğrulanamaz.
+- EMA modellerinin test skorlarını ben de denetim sırasında hesapladım, ama **bu rapora bilerek koymadım.** Final seçimden önce görülmeleri test setini bir kez daha seçim aracına çevirirdi.
+
+**O6. Belgeler birbiriyle çelişiyor.**
+- `README.md` "en iyi sonuç" olarak ensemble_v1'i (0.783) gösteriyor. Eski PROJECT_STATUS ve AGENT_REPORT ise tek modeli (0.818) gösteriyor.
+- Eski PROJECT_STATUS'ta yapılmış işler (TTA, kalibrasyon, metadata) hâlâ "henüz başlanmayan" listesinde duruyordu. Model tablosunda seed 2 ve Small yoktu.
+- `src/README.md`, artık var olmayan `models/` ve `utils/` modüllerini anlatıyor.
+- *Neden önemli:* Bir okuyucu (ör. hocan) hangi sayının sonuç olduğunu anlayamaz.
+
+**O7. Birden fazla şey aynı anda değiştirildi.**
+- baseline_v1'de üç değişiklik birlikte: dedup, augmentation, Gray-World.
+- Augmentation v2'de iki değişiklik birlikte.
+- 22k modelinde üç değişiklik birlikte: 22k ön eğitim, 384px, tarif v2.
+- Bu yüzden kazancın hangi değişiklikten geldiği ayrılamıyor; ajan da bunu kabul ediyor.
+- Kapatmak için yeni deney gerekmez. Raporda "ablation yapılmadı" diye bir sınırlama olarak yazılması yeterli.
+
+### Düşük
+
+- **D1. Hasta kimliği yok.** HAM10000'de `patient_id` alanı yok. Lezyon bazlı bölme yapılabilecek en iyisi, ama aynı hastanın farklı lezyonları farklı bölmelere düşebilir. Raporda sınırlama olarak yazılmalı.
+- **D2. AUC hiç raporlanmıyor.** Melanom AUC ve macro AUC hiçbir dosyada yok. Logit'ler hazır olduğu için hesaplaması bedava.
+- **D3. `.gitignore` eksik.** Yalnızca `best_model.pt`'yi kapsıyor. `best_model_ema.pt` dosyaları takip dışı ama ignore edilmiyor. Yanlışlıkla commit edilirse GitHub 100MB üstünü reddeder.
+- **D4. Augmentation v1'de geometri farkı.** Eğitimde 600×450 görüntüden RandomResizedCrop yapılıyor, değerlendirmede ise görüntü kareye sıkıştırılıyor. Ajan bunu fark etti ve v2 ile denedi (kazanç yok). Küçük, açık kalmış bir tutarsızlık.
+- **D5. Erken dönem kayıtsız.** 4–8 Ekim'deki 5 deneyin sonucu yalnızca sohbette kaldı. Checkpoint ensemble scripti eklenip silindi ve envanterde yok.
+
+---
+
+## 8. Sapma Analizi
+
+### Kronoloji
+
+| Dönem | Ne yapıldı | Ana hedefe katkısı |
+|---|---|---|
+| **4–8 Ekim: kurulum** | Pipeline, Colab sorunları, duplicate hatası, focal loss, cosine, eşik denemeleri | Gerekliydi, ama kayıt disiplini yoktu; sonuçlar kayboldu |
+| **9–13 Ekim: genişlik** | 4 mimari + ensemble | Hedefe hizmet etti, ama karşılaştırmalar testte yapıldı. **13 Ekim'de val disiplini kuruldu:** ensemble 6 adımda, tamamen val'de seçildi. Projenin metodolojik dönüm noktası. |
+| **15–16 Ekim: eklenti yağmuru** | 7 maddelik yol haritası (TTA → metadata → 384 → dış test → ek veri → dış doğrulama → arayüz). 2 günde augmentation v2, TTA, metadata, 1k-384, ISIC 2019 ve dış doğrulama | **Savrulmanın merkezi.** Arka arkaya 5 deneme sonuçsuz kaldı. Hepsi tek koşuydu ve gürültü eşiği henüz ölçülmemişti. Dış test de bu dönemde harcandı. |
+| **16–19 Ekim: tarif** | Label smoothing hatası bulundu; tarif v2 ve 22k+384 | **Projenin en büyük kazancı:** son 5 epoch F1 0.733'ten 0.788'e çıktı. Yön ensemble'dan tek modele döndü. |
+| **19–20 Ekim: inceltme** | Test çözünürlüğü, TTA, seed, EMA, Small | Azalan getiri. Seed cetveli doğru bir hamleydi ama 9 Ekim'de yapılmalıydı. |
+| **20–26 Ekim** | İlerleme yok | 26 maddelik "denenmedi" listesi birikti |
+
+### Neden savruldunuz?
+
+1. **"Bitti" tanımı ve durma kuralı yoktu.** Her sonuç yeni bir fikir doğurdu. Yol haritası her seferinde uzadı (eski dosyanın 7. maddesi arayüzdü).
+2. **Ölçülen etki ölçüm gürültüsü kadar küçüktü.** Etkiler 0.01 civarındaydı, gürültü de 0.01–0.02. Gürültünün ne kadar olduğu ise ancak 20 Ekim'de ölçüldü. Bu yüzden çoğu deney "belirsiz" bitti ve bir sonrakine geçildi.
+3. **Durum dosyası değişiklik günlüğüne dönüştü.** Senin istediğin şey tek ve somut bir sonraki adımdı. Dosya ise sürekli bir seçenek menüsü bıraktı; son hali bile üç seçenekle bitiyordu.
+4. **Zamanı gelmemiş işler planın içindeydi:** arayüz, ek veri, dış doğrulama.
+
+### "Beni rahatsız edenler" bölümü
+
+Bu bölüm doldurulmamış, şablon metni olduğu gibi duruyor. Bu yüzden "Asıl sorunum" cümlesine cevap veriyorum: *"Çok fazla şey denedik ve nerede durmam gerektiğini bilmiyorum."*
+
+- **Evet, savruluyorsunuz.** 15 Ekim'den bu yana 11 değişiklik denendi, yalnızca biri kalıcı kazanç sağladı. Altı mimari kullanıldı (B0, ConvNeXt-T, V2-S, Swin, ConvNeXt-T 22k, ConvNeXt-S) ve strateji bir kez tersine döndü (genişlik/ensemble → tek model).
+- **Durma noktası şimdi.** Elindeki iki 22k koşusu, bu bütçeyle (ücretsiz GPU, 986 görüntülük test seti) güvenilir şekilde ayırt edilebilecek iyileştirmelerin sınırına gelmiş durumda.
+
+### Projenin kendi amacından sapma
+
+`CLAUDE.md` şunları istiyor: "öğrenme amaçlı", "küçük adımlar", "önce sen dene". Commit ritmi ise ajan güdümlü yüksek bir hız gösteriyor. Örnekler:
+- 13 Ekim'de 18:36–19:22 arasında, 46 dakikada 6 ensemble commit'i.
+- 15 Ekim'de bir günde 5 deney.
+
+Bunun öğrenme hedefine ne kadar hizmet ettiği repodan ölçülemez. Bunu soru olarak 13. bölüme ekledim.
+
+---
+
+## 9. Bitiş Tanımı (Öneri)
+
+*Bu bölüm bir öneridir, senin onayını bekliyor.*
+
+### 9.1 Ulaşılabilir tavan
+
+**Elde olan sonuçlar:**
+- İç testte üç 22k koşusu: F1 0.816–0.821, BA 0.809–0.830.
+- Dış test yalnızca eski ensemble için ölçüldü: BA 0.765.
+
+**Ölçümün hassasiyeti ne kadar?**
+- Balanced accuracy, 7 sınıfın recall'larının ortalaması.
+- Testte df sınıfında 14, vasc sınıfında 13 görüntü var.
+- Bu yüzden tek bir df görüntüsünün doğru ya da yanlış olması BA'yı yaklaşık 1/14/7 ≈ **0.010** oynatır.
+- En iyi modelde BA'nın %95 güven aralığı **0.761–0.852**. Yani aralığın genişliği yaklaşık 9 puan.
+- Yalnızca seed değişince test BA'sı 0.809'dan 0.830'a çıktı.
+
+**Dışarıdaki referans (repodaki notlara göre):**
+- ISIC 2018'de ek veri kullanmayan en iyi sonuç: BA 0.845, büyük modellerden oluşan bir ensemble ile.
+- Yarışma birincisi: BA 0.885, yaklaşık 37 bin ek görüntüyle.
+- Bu sayılar bizim dış test setimize benzeyen bir sette ölçüldü.
+
+**Hedefler hakkında sonuç:**
+- **F1 0.81–0.82 (iç test):** Gerçekçi ve zaten görüldü.
+- **BA ≥ 0.85 (iç test):** Tek bir koşuda şansla görülebilir, ama güvenilir bir hedef değil. 0.85'lik bir nokta tahmininin bile güven aralığının alt sınırı 0.80'in altında kalır. Yani 0.85 ile 0.83 arasındaki fark bu test setiyle ayırt edilemez.
+- **BA ≥ 0.85 (dış test):** Bu bütçeyle gerçekçi değil. Yarışmadaki ensemble'ların seviyesi.
+- **İki hedef kısmen birbirine karşı çalışıyor.** BA, karar kuralını nadir sınıflara kaydırarak (prior veya logit düzeltmesiyle) F1 pahasına yükseltilebilir. Bu bir model iyileştirmesi değil, bir düğmeyi çevirmek olur.
+
+### 9.2 Önerilen eşikler
+
+| Kriter | Eşik |
+|---|---|
+| İç test macro F1 | ≥ 0.80 (nokta tahmini, %95 GA ile raporlanır) |
+| İç test balanced accuracy | ≥ 0.80 (aynı şekilde) |
+| Melanom "tarama" çalışma noktası | Val'de seçilmiş, val'de melanom recall ≥ 0.80. Testte ne çıkarsa raporlanır. |
+| Dış test | Eşik yok. Bir kez ölçülür ve "ikinci bakış" diye etiketlenerek dürüstçe raporlanır. |
+
+**Kural:** Final ölçüm ne verirse versin, tarif değişmez. Bitiş, belirli bir sayıya ulaşmak değil, bu protokolü tamamlamaktır.
+
+### 9.3 Teslim edilecekler (kontrol listesi)
+
+1. **Final tarif dondurulmuş ve yazılı.** `baselines/final_v1/README.md` dosyası şunları içerir: hangi modeller, T değerleri, eşikler. Bu dosya **test ölçümünden önce** commit edilir; commit zamanı test JSON'undan önce olmalı.
+2. **İç test, tek ölçüm.** Şunları içerir: F1, BA, macro precision, sınıf bazında metrikler, melanom recall/precision, **melanom AUC ve macro AUC**, confusion matrix, iki çalışma noktası, güven aralıkları.
+3. **Dış test, tek ölçüm.** "İkinci bakış" etiketiyle.
+4. **Ağırlıklar en az iki yerde.** Yerel diskin yanında Drive, GitHub Release veya Kaggle Models. MD5'leri kayıtlı, README'den linkli.
+5. **Tekrarlanabilirlik:**
+   - Bölme dosyası (`image_id, lesion_id, label, split`) git'te.
+   - `requirements.txt` versiyonları sabitlenmiş.
+   - Final eğitim komutu tek blok halinde yazılı.
+   - Değerlendirme komutu temiz bir klonda çalışıyor.
+6. **Dokümantasyon:**
+   - `README.md`: problem, veri, yöntem, sonuç tablosu, sınırlamalar. Sınırlamalarda K1, O1, O7 ve D1 yazılı olmalı.
+   - `EXPERIMENTS.md`: deney geçmişi. Bu raporun 5. bölümü temel alınabilir.
+7. **Repo hijyeni:**
+   - `git status` temiz.
+   - `.gitignore` bütün `.pt` dosyalarını kapsıyor.
+   - Eskimiş belgeler (`src/README.md`, README'deki "en iyi sonuç") güncellenmiş.
+
+---
+
+## 10. Kapsam Sınırları (Öneri)
+
+**Kapsam içi:** Yalnızca 9.3'teki 7 madde ve bunlar için gereken küçük kod değişiklikleri:
+- `summarize()` fonksiyonuna AUC eklemek.
+- `ensemble_test.py` ve `external_validation.py`'yi final tarifini parametre olarak alacak şekilde genelleştirmek.
+- Bölme dosyasını dışa aktarmak.
+
+**Kapsam dışı (bitiş tanımına ulaşılana kadar yapılmayacaklar):**
+- Yeni eğitim koşuları. Bunlara dahil: train+val ile final eğitim, 3. seed, 448px, Small/V2-M/A100.
+- 5-fold CV.
+- Ek veriyi yeniden denemek (ISIC 2019 v2).
+- Tarif v3, mixup/CutMix, logit adjustment, sampler'lar, layer-wise LR, multi-crop.
+- ensemble_v2.
+- TTA veya metadata'yı yeniden açmak.
+- Grad-CAM, EDA'nın küçük bir veri özeti tablosundan fazlası.
+- Arayüz / demo.
+
+Bunların hepsi geçerli fikirler. Ama mevcut test setinin hassasiyetiyle kazançları ölçülemez, ve her biri yeni bir "belirsiz" sonuç doğurma riski taşır. Bitişten sonra, istersen ayrı bir "v2" projesi olarak ele alınabilirler.
+
+---
+
+## 11. Kalan Yol Haritası
+
+| # | İş | Efor | Bağımlılık |
+|---|---|---|---|
+| 1 | Ağırlıkları yedekle: 22k s42, s2 (ve EMA'lar) → Drive `archive/`, MD5 ile | Küçük | – |
+| 2 | Repo hijyeni: `.gitignore` → `baselines/*/*.pt`; takip dışı dosyalar için karar; bölme CSV'sini dışa aktar ve commit et | Küçük | – |
+| 3 | Final tarifi val'de dondur: aday A = s42 tek model, aday B = s42+s2 ortalaması; çalışma noktası; README; commit | Küçük | 1 |
+| 4 | `summarize()`'a melanom AUC ve macro AUC ekle; test ve dış test scriptlerini final tarifi alacak şekilde genelleştir; ensemble_v1 çıktısıyla regresyon kontrolü yap | Küçük–Orta | – |
+| 5 | İç testte tek ölçüm, dış testte tek ölçüm (ikinci bakış) | Küçük | 3, 4 |
+| 6 | Versiyonları sabitle (Kaggle koşusundaki `pip freeze`'den) ve tekrarlanabilirlik bölümünü yaz | Küçük | 2 |
+| 7 | `README.md` ve `EXPERIMENTS.md`'yi yeniden yaz; eskimiş belgeleri temizle | Orta | 5 |
+
+**Toplam:** Yaklaşık 2–3 çalışma oturumu. Hiçbiri GPU gerektirmiyor.
+
+**Tamamlanma tahmini: yaklaşık %70.** Gerekçe:
+
+| Alan | Tamamlanma | Neden |
+|---|---|---|
+| Deney ve modelleme | ~%95 | Final adaylar hazır, yeni eğitim gerekmiyor |
+| Değerlendirme | ~%80 | Kod ve protokol var, final ölçüm yapılmadı |
+| Tekrarlanabilirlik | ~%50 | Commit kayıtları var; versiyonlar ve bölme dosyası yok |
+| Paketleme ve dokümantasyon | ~%30 | README eskimiş, deney geçmişi dağınık, ağırlıklar tek kopya |
+
+---
+
+## 12. Sıradaki 3 Adım
+
+*Ana geliştirme ajanına doğrudan verilebilir. Üç adımın hiçbirinde eğitim yapılmayacak.*
+
+**Adım 1: Ağırlık güvenliği ve repo hijyeni (test setine dokunma).**
+1. `baselines/convnext_tiny_in22k_384_v1/best_model.pt` ve `baselines/convnext_tiny_in22k_384_seed2_ema/best_model*.pt` dosyalarını Drive'da `skin-cancer-detection-runs/archive/<klasör adı>/` altına kopyala. MD5'lerini ilgili README'lere yaz.
+2. `.gitignore` dosyasında `baselines/*/best_model.pt` satırını `baselines/*/*.pt` yap.
+3. `data/processed/manifest.csv`'nin `image_id, lesion_id, label, split` sütunlarını `splits/ham10000_lesion_split_v1.csv` olarak dışa aktar. `split_manifest.py`'yi geçici bir dosyaya yeniden çalıştırıp çıktının aynı olduğunu doğrula. CSV'yi MD5'iyle birlikte commit et.
+4. Takip dışı dosyalar (`test_metrics.json`, `confusion_matrix.png`, `AGENT_REPORT.md`) için kullanıcının kararını bekle (soru 6).
+
+**Adım 2: Final tarifi yalnızca val ile dondur.**
+1. Adaylar:
+   - A: `convnext_tiny_in22k_384_v1` tek model.
+   - B: A + seed 2, her biri val'de T ile kalibre edilip eşit ağırlıkla ortalanmış.
+2. Tek sayı kaynağı olarak `predictions.npz` kullan (Mac, fp32).
+3. Seçim kuralını **önceden** yaz:
+   - Val F1 farkı 0.013'ten küçükse, val'de melanom recall ≥ 0.80 sağlayan noktada daha az yanlış melanom alarmı veren aday seçilir.
+   - Tarama eşiği: val'de melanom recall ≥ 0.80 sağlayan en yüksek eşik.
+4. Sonucu `baselines/final_v1/README.md` dosyasına yaz: modeller, T değerleri, eşik, val tabloları. **Test JSON'u üretmeden önce** commit et.
+
+**Adım 3: Tek ölçüm.**
+1. `src/evaluation/evaluate.py::summarize`'a melanom AUC (one-vs-rest) ve macro AUC ekle.
+2. `ensemble_test.py` ve `external_validation.py`'yi `baselines/final_v1/` tarifini okuyacak şekilde genelleştir. ensemble_v1'in eski JSON'larının aynen yeniden üretildiğini kontrol et.
+3. final_v1'i iç testte bir kez, ISIC 2018 dış testinde bir kez ölç. Dış test çıktısının adında ve README'sinde "ikinci bakış" yazsın.
+4. Sonuçları `baselines/final_v1/` altına yaz ve commit et.
+5. Sonuç ne çıkarsa çıksın tarif değişmez. Eşikler (9.2) tutmazsa bu da sınırlama olarak raporlanır.
+
+---
+
+## 13. Sana Sorularım
+
+Yalnızca ilk üçü bitiş için şart; diğerleri için önerilerim varsayılan kabul edilebilir.
+
+1. **Dersin teslim beklentisi var mı?** Rapor formatı, sunum, demo, Grad-CAM, son tarih gibi. Varsa bitiş tanımı buna göre güncellenmeli. Bu bölüm prompt'ta doldurulmamıştı.
+2. **Hedef revizyonu:** "BA ≥ 0.85" yerine "iç testte F1 ≥ 0.80 ve BA ≥ 0.80, artı dış testin dürüstçe raporlanması" kabul mü? *(Önerim: evet.)*
+3. **Final model:** 2 seed ortalaması mı, tek model mi? *(Önerim: Adım 2'deki önceden yazılmış kurala bırakmak. Val verileri şu an 2 seed ortalamasını gösteriyor: F1 aynı, melanom ayırma daha iyi. Yeni eğitim gerektirmiyor.)*
+4. **Train+val ile yeniden eğitim planı iptal edilsin mi?** *(Önerim: iptal. Val'siz bir model doğrulanamaz, kazancı belirsiz, ve yeni bir koşu demek.)*
+5. **Small ve seed 2'nin test sonuçlarını 20 Ekim'deki "Small reddedildi" kararından önce gördün mü?** Bunu yalnızca sen bilebilirsin. Gördüysen o karar raporda "test bilgisiyle verilmiş olabilir" diye not edilmeli.
+6. **Takip dışı dosyalar ne olsun?** *(Önerim: Small/seed 2'nin `test_metrics.json` ve `confusion_matrix.png` dosyaları "karar sonrası görüldü" notuyla commit edilsin. `AGENT_REPORT.md` silinsin; içeriği bu raporun 5. bölümüyle düzeltilmiş halde `EXPERIMENTS.md`'ye taşınsın.)*
+7. **`CLAUDE.md`'deki öğrenme modu kapanışta da geçerli mi?** Yani her adım açıklansın ve önce sen deneyecek misin, yoksa bu son aşamada "hızlı bitir" moduna mı geçilsin? Şimdiye kadar yapılanların ne kadarını anladığını yalnızca sen bilebilirsin. Raporu yazarken sınırlamaları (K1, O1, O7) kendi cümlelerinle açıklayabiliyor olman önemli.
+8. **Ağırlıkların kalıcı ve paylaşılabilir yeri neresi olsun?** Drive linki, GitHub Release veya Kaggle Models. *(Önerim: GitHub Release. Repoyla aynı yerde, 2GB'a kadar dosya kabul ediyor.)*
+
+---
+
+## Ek: Önceki durum dosyasından korunan operasyonel notlar
+
+- **Kaggle döngüsü:**
+  1. `kaggle/skin-cancer-train.ipynb` dosyasının ilk hücresinde `ARCHITECTURE` ve `EXTRA_TRAIN_ARGS`'ı değiştir, kodu GitHub'a gönder.
+  2. `kaggle kernels push -p kaggle` çalıştır. CLI yolu: `~/.local/kaggle-cli/bin/kaggle`; `SSL_CERT_FILE` certifi'ye ayarlı olmalı.
+  3. Sonuçları `kaggle kernels output yunusemreozkan/skin-cancer-train -p <klasör>` ile çek.
+- **Drive:** `~/Library/CloudStorage/GoogleDrive-…/Drive'ım/skin-cancer-detection-runs/`. `latest/` her koşuda üzerine yazılır; kalıcı kopyalar `archive/<model adı>/` altında durur.
+- **Kurallar:**
+  - `deri-kanseri-cnn-uygulamas.ipynb` dosyasına dokunulmaz.
+  - `git add` her zaman dosya adıyla yapılır, `-A` kullanılmaz.
+  - 50MB üstü ağırlıklar git'e girmez.
+  - Colab notebook'u her zaman GitHub linkinden açılır.
+- **Proje konumu:** `~/Projeler/skin-cancer-detection`. 17 Ekim'de iCloud Masaüstü'nden buraya taşındı.
