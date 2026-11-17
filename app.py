@@ -15,7 +15,16 @@ import gradio as gr
 from src.inference.predictor import Predictor
 
 MODEL_DIR = os.environ.get('MODEL_DIR', 'models/final_v1')
+# Yerelde paket yoksa (or. Hugging Face Space'te) model Hub'dan indirilir. Revizyon sabit bir etiket:
+# depoya yeni surum yuklense bile demo hangi modeli kullandigini bilir; v2'ye gecis bilincli bir degisiklik olur.
+MODEL_REPO = os.environ.get('MODEL_REPO', 'emreozkn/skin-lesion-convnext-v1')
+MODEL_REVISION = os.environ.get('MODEL_REVISION', 'v1')
 EXAMPLES_DIR = Path('assets/examples')
+
+if not Path(MODEL_DIR, 'config.json').exists():
+    from huggingface_hub import snapshot_download
+
+    MODEL_DIR = snapshot_download(MODEL_REPO, revision=MODEL_REVISION)
 
 CLASS_NAMES = {
     'akiec': 'Aktinik keratoz / Bowen (akiec)',
@@ -115,4 +124,5 @@ with gr.Blocks(title='Cilt Lezyonu Sınıflandırma (araştırma)') as demo:
 
 
 if __name__ == '__main__':
-    demo.launch()
+    # SHARE=1: Gradio gecici bir herkese acik link verir (72 saat, yalnizca bu bilgisayar acikken calisir).
+    demo.launch(share=os.environ.get('SHARE') == '1')
