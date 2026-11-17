@@ -133,8 +133,8 @@
 
 ## C0. Ölçüm altyapısı: 5-fold CV (önce bu)
 **Neden:** 992 görüntülük val seti 0.01–0.02'lik farkları ayırt edemiyor. CV ile değerlendirme ~9.000 görüntüye dayanır.
-- [ ] Train+val birleştirilir. **İç test setine dokunulmaz.**
-- [ ] `StratifiedGroupKFold` (grup = `lesion_id`, katman = `label`) ile 5 fold oluşturulur ve `splits/cv5_v1.csv` olarak kaydedilir.
+- [x] Train+val birleştirilir. **İç test setine dokunulmaz.**
+- [x] `StratifiedGroupKFold` (grup = `lesion_id`, katman = `label`) ile 5 fold oluşturulur ve `splits/cv5_v1.csv` olarak kaydedilir. (2026-11-17, MD5 `e8e35f94bd974356390d3f2aba045587`)
 - [ ] v1 tarifi 5 fold'da eğitilir (Kaggle'da ~5 saat). Her fold'un OOF (out-of-fold) tahminleri kaydedilir.
 - [ ] Çıktılar:
   - CV ortalaması ± standart sapma (F1, BA, melanom recall).

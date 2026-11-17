@@ -47,7 +47,12 @@ A'dan kalanlar (B'yi bekletmez):
 
 **Aşama B kapandı** (yerel demo çalışıyor; kalıcı link sunuma bırakıldı).
 
+## Aşama C (v2) durumu
+
+- [x] C0a: `splits/cv5_v1.csv` (MD5 `e8e35f94bd974356390d3f2aba045587`), `python -m src.data.make_cv_folds`. Train+val = 9029 görüntü,
+  6723 lezyon, 5 fold (~1806 görüntü); lezyon iki fold'da yok, test (986) dışarıda; sınıf oranları fold'lar arasında ±0.001.
+
 ## Sıradaki tek adım
 
-**C0a: 5-fold CV bölme dosyası.** Train+val birleştirilir (iç test dokunulmaz), `StratifiedGroupKFold` (grup `lesion_id`,
-katman `label`) ile 5 fold, `splits/cv5_v1.csv`. Kaggle'a henüz gerek yok.
+**C0b: eğitim kodunu CV'ye hazırlamak.** `train.py`'ye `--fold k` seçeneği (fold k doğrulama, diğer 4 fold eğitim), en iyi epoch
+yerine **son epoch**'un kaydı ve OOF tahminlerinin (fold k'nin logit'leri) kaydı. Önce Mac'te 1 epoch'luk küçük bir deneme.
