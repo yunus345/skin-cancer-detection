@@ -1,0 +1,127 @@
+{
+  "threshold": 0.85,
+  "rule": "val emin-dogruluk >= 0.95 saglayan en kucuk tau",
+  "chosen": {
+    "tau": 0.85,
+    "sure_fraction": 0.7590725806451613,
+    "sure_accuracy": 0.953519256308101,
+    "errors_flagged": 96,
+    "errors_total": 131,
+    "missed_mel_while_sure": 8
+  },
+  "scan": [
+    {
+      "tau": 0.3,
+      "sure_fraction": 1.0,
+      "sure_accuracy": 0.8679435483870968,
+      "errors_flagged": 0,
+      "errors_total": 131,
+      "missed_mel_while_sure": 31
+    },
+    {
+      "tau": 0.35,
+      "sure_fraction": 0.9969758064516129,
+      "sure_accuracy": 0.8685540950455005,
+      "errors_flagged": 1,
+      "errors_total": 131,
+      "missed_mel_while_sure": 31
+    },
+    {
+      "tau": 0.4,
+      "sure_fraction": 0.9889112903225806,
+      "sure_accuracy": 0.873598369011213,
+      "errors_flagged": 7,
+      "errors_total": 131,
+      "missed_mel_while_sure": 30
+    },
+    {
+      "tau": 0.45,
+      "sure_fraction": 0.9828629032258065,
+      "sure_accuracy": 0.877948717948718,
+      "errors_flagged": 12,
+      "errors_total": 131,
+      "missed_mel_while_sure": 29
+    },
+    {
+      "tau": 0.5,
+      "sure_fraction": 0.9606854838709677,
+      "sure_accuracy": 0.8866736621196223,
+      "errors_flagged": 23,
+      "errors_total": 131,
+      "missed_mel_while_sure": 27
+    },
+    {
+      "tau": 0.55,
+      "sure_fraction": 0.9334677419354839,
+      "sure_accuracy": 0.8952483801295896,
+      "errors_flagged": 34,
+      "errors_total": 131,
+      "missed_mel_while_sure": 24
+    },
+    {
+      "tau": 0.6,
+      "sure_fraction": 0.9092741935483871,
+      "sure_accuracy": 0.9068736141906873,
+      "errors_flagged": 47,
+      "errors_total": 131,
+      "missed_mel_while_sure": 19
+    },
+    {
+      "tau": 0.65,
+      "sure_fraction": 0.8850806451612904,
+      "sure_accuracy": 0.9168564920273349,
+      "errors_flagged": 58,
+      "errors_total": 131,
+      "missed_mel_while_sure": 17
+    },
+    {
+      "tau": 0.7,
+      "sure_fraction": 0.8578629032258065,
+      "sure_accuracy": 0.9212690951821386,
+      "errors_flagged": 64,
+      "errors_total": 131,
+      "missed_mel_while_sure": 17
+    },
+    {
+      "tau": 0.75,
+      "sure_fraction": 0.8316532258064516,
+      "sure_accuracy": 0.9321212121212121,
+      "errors_flagged": 75,
+      "errors_total": 131,
+      "missed_mel_while_sure": 15
+    },
+    {
+      "tau": 0.8,
+      "sure_fraction": 0.7993951612903226,
+      "sure_accuracy": 0.9369482976040353,
+      "errors_flagged": 81,
+      "errors_total": 131,
+      "missed_mel_while_sure": 12
+    },
+    {
+      "tau": 0.85,
+      "sure_fraction": 0.7590725806451613,
+      "sure_accuracy": 0.953519256308101,
+      "errors_flagged": 96,
+      "errors_total": 131,
+      "missed_mel_while_sure": 8
+    },
+    {
+      "tau": 0.9,
+      "sure_fraction": 0.688508064516129,
+      "sure_accuracy": 0.972181551976574,
+      "errors_flagged": 112,
+      "errors_total": 131,
+      "missed_mel_while_sure": 5
+    },
+    {
+      "tau": 0.95,
+      "sure_fraction": 0.32056451612903225,
+      "sure_accuracy": 0.9874213836477987,
+      "errors_flagged": 127,
+      "errors_total": 131,
+      "missed_mel_while_sure": 1
+    }
+  ],
+  "set": "val (992)"
+}

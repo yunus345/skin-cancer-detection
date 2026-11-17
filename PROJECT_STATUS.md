@@ -32,9 +32,12 @@ A'dan kalanlar (B'yi bekletmez):
   olasılıkları kayıtlı sayılarla aynı (MPS'te fark 0, CPU'da 1e-7), kararların %100'ü aynı.
 - [x] B2a Grad-CAM: `Predictor.gradcam()` + `overlay()`, seed 42 üzerinde, elle yazıldı (kütüphane yok). Val'de her sınıftan
   bir görüntüde haritalar lezyonun üstünde; sınıfa göre değişiyor (mel/bkl korelasyon -0.01, mel/nv 0.53). Mac'te ~0.2 s.
+- [x] B2b Gradio uygulaması (`python app.py`, yerelde): ilk 3 sınıf, karar, normal/tarama, Grad-CAM ve sınıf seçimi,
+  uyarılar, metrikler. "Emin değilim" eşiği val'de τ = 0.85 (`baselines/final_v1/uncertainty.json`): vakaların %24'ü
+  doktora yönlendirilir, emin olunanlarda doğruluk 0.954; ama 102 melanomdan 8'i "emin" iken kaçıyor.
 - [ ] Hugging Face Hub'a yükleme: Spaces aşamasında (hesap ve token gerekiyor).
 
 ## Sıradaki tek adım
 
-**B2b: Gradio uygulaması (yerelde).** Görüntü yükleme + örnek görüntüler, ilk 3 sınıf, Grad-CAM, normal/tarama seçimi,
-sabit uyarılar, model sürümü ve metrikler. "Emin değilim" eşiği val'de belirlenecek. Spaces'e yükleme bundan sonra.
+**B2c: Hugging Face Spaces'e yükleme.** Ağırlıklar HF Hub model deposuna (`v1`), uygulama bir Space'e. Hugging Face
+hesabı ve yazma yetkili token gerekiyor. Sonra README'ye demo linki ve ekran görüntüsü.

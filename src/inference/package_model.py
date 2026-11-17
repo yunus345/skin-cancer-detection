@@ -120,6 +120,12 @@ def main():
         },
         'recipe': str(recipe_path),
     }
+    # "Emin degilim" esigi (choose_uncertainty_threshold.py, val'de secildi); yoksa arayuz uyari gostermez.
+    uncertainty_path = recipe_dir / 'uncertainty.json'
+    if uncertainty_path.exists():
+        uncertainty = json.loads(uncertainty_path.read_text())
+        config['uncertainty'] = {'threshold': uncertainty['threshold'], 'rule': uncertainty['rule'],
+                                 'val': uncertainty['chosen']}
     (out_dir / 'config.json').write_text(json.dumps(config, indent=2, ensure_ascii=False))
     print(f'Wrote {out_dir / "config.json"}')
 

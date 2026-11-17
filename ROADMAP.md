@@ -100,13 +100,13 @@
 - [x] Ön işleme (Gray-World ve normalizasyon) `src/` içindeki koddan doğrudan import edilir, kopyalanmaz.
 
 ## B2. Gradio uygulaması (Hugging Face Spaces)
-- [ ] Görüntü yükleme ve HAM10000'den birkaç örnek görüntü.
-- [ ] En olası 3 sınıf ve olasılıkları.
+- [x] Görüntü yükleme ve HAM10000'den birkaç örnek görüntü. (`app.py`, yerelde çalışıyor, 2026-11-17)
+- [x] En olası 3 sınıf ve olasılıkları.
 - [x] Grad-CAM ısı haritası. (`Predictor.gradcam`, 2026-11-17; arayüze bağlanması B2b'de.)
-- [ ] Normal / tarama modu seçimi.
-- [ ] "Emin değilim" kuralı: en yüksek olasılık eşiğin altındaysa tahmin yerine "doktor incelemesi önerilir" uyarısı. Eşik val'de belirlenir.
-- [ ] Sabit uyarılar: "Araştırma amaçlıdır, tanı aracı değildir. Gerçek hasta görüntüsü yüklemeyin."
-- [ ] Ekranda model sürümü ve test metrikleri gösterilir.
+- [x] Normal / tarama modu seçimi.
+- [x] (τ = 0.85, `choose_uncertainty_threshold.py`, val) "Emin değilim" kuralı: en yüksek olasılık eşiğin altındaysa tahmin yerine "doktor incelemesi önerilir" uyarısı. Eşik val'de belirlenir.
+- [x] Sabit uyarılar: "Araştırma amaçlıdır, tanı aracı değildir. Gerçek hasta görüntüsü yüklemeyin."
+- [x] Ekranda model sürümü ve test metrikleri gösterilir.
 
 ## B3. (İsteğe bağlı) Giriş kontrolü
 - [ ] "Dermoskopi görüntüsü mü?" ön filtresi. Basit bir yöntemle başlanır (OOD skoru veya küçük bir ikili sınıflandırıcı).

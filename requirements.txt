@@ -13,3 +13,4 @@ tqdm
 jupyter
 PyYAML
 timm
+gradio
