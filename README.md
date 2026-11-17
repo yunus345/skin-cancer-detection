@@ -73,14 +73,63 @@ Deney geçmişi (B0 224 px ile F1 0.70'ten bu modele nasıl gelindi): [EXPERIMEN
 
 ## Sınırlamalar
 
-<!-- TASLAK: Bu bölümü proje sahibi kendi cümleleriyle yazacak (ROADMAP A5). Aşağıdaki maddeler
-yalnızca hatırlatma; her birinin ayrıntısı PROJECT_STATUS.md'deki denetim raporunda (bölüm 7). -->
+**1. İç test seti tamamen bağımsız değil.**
+Projenin ilk günlerinde farklı mimariler, iç test setindeki sonuçlara bakılarak
+karşılaştırıldı. Validation disiplini daha sonra kuruldu ve final model yalnızca
+validation verisiyle seçildi. Ancak test seti geliştirme sürecinde birkaç kez
+görüldüğü için iç test skorları gerçek performansı bir miktar iyimser gösteriyor
+olabilir. Bu iyimserliğin ölçülmüş bir göstergesi var: eski ensemble modelin
+balanced accuracy'si iç testte 0.809 iken dış testte 0.765'e düştü.
 
-- Test seti geliştirme sırasında birçok kez görüldü (denetim K1).
-- Dış test seti erken kullanıldı; final_v1 ölçümü ikinci bakış (O1).
-- Bazı değişiklikler birlikte yapıldı, ayrı etkileri (ablation) ölçülmedi (O7).
-- Veri setinde hasta kimliği yok, bölme ancak lezyon bazında yapılabildi (D1).
-- Değişkenlik sadece 2 seed ile ölçüldü.
+**2. Dış test seti final model için "ikinci bakış".**
+ISIC 2018 resmi test seti, final modelden önce eski bir ensemble modeli
+değerlendirmek için bir kez kullanıldı. Bu nedenle final modelin dış test sonucu,
+hiç kullanılmamış bir sette yapılan ilk ölçüm değil. Yine de final model bu sete
+bakılarak seçilmedi, dolayısıyla projedeki en güvenilir sonuç budur.
+
+**3. Değişikliklerin etkisi ayrı ayrı ölçülmedi (ablation yok).**
+En büyük performans artışı üç değişikliğin birlikte uygulanmasıyla elde edildi:
+ImageNet-22k ön eğitimi, 384 px çözünürlük ve yeni eğitim tarifi. Bunlardan
+yalnızca ikisi ayrıca denendi (224 px'te yeni tarif: val F1 0.744 → 0.766;
+eski tarifle 384 px: 0.744 → 0.769); ImageNet-22k'nın tek başına etkisi hiç
+ölçülmedi. Bu denemeler de tek eğitimlik olduğu için kazancın ne kadarının
+hangisinden geldiği bilinmiyor.
+
+**4. Bölme hasta bazında değil, lezyon bazında yapıldı.**
+Aynı lezyonun görüntüleri her zaman aynı sete düşecek şekilde bölündü. Ancak
+HAM10000'de hasta kimliği bulunmadığı için, aynı hastanın farklı lezyonları
+farklı setlere düşmüş olabilir. Bu da sonuçları hafifçe iyimser yapabilir.
+
+**5. Ölçümler küçük örneklemlere dayanıyor.**
+Test setinde bazı sınıfların çok az örneği var (dermatofibroma 14, vasküler
+lezyon 13 görüntü). Bu sınıflarda tek bir görüntünün doğru ya da yanlış
+sınıflanması balanced accuracy'yi yaklaşık 0.01 değiştiriyor. Bu yüzden
+raporlanan değerler %95 güven aralıklarıyla birlikte okunmalı. Örneğin final
+modelin balanced accuracy güven aralığı iç testte yaklaşık 9 puan, dış testte
+yaklaşık 7 puan genişliğindedir.
+
+**6. Rastgelelik etkisi yalnızca iki eğitimle ölçüldü.**
+Aynı tarif yalnızca rastgelelik ayarı (seed) değiştirilerek iki kez eğitildi.
+Validation'da macro F1 yaklaşık 0.013, melanom recall'u ise yaklaşık 0.11
+değişti. İki eğitim, bu değişkenlik için ancak kaba bir tahmin veriyor.
+Özellikle melanom recall'undaki dalgalanma, bu metriğe ilişkin sonuçların
+dikkatli yorumlanmasını gerektiriyor.
+
+**7. Bazı kararların test bilgisinden bağımsız olduğu doğrulanamadı.**
+ConvNeXt-Small'un elenmesi ve seed 2 koşusuna dayanan kararlar verilirken bu
+modellerin test sonuçları diskte hesaplanmış durumdaydı; kararların bu sonuçlar
+görülmeden verildiği doğrulanamadı. Ayrıca final tarif (tek model mi, iki modelin
+ortalaması mı) validation'da önceden yazılmış bir kuralla seçildi, ama o sırada iki
+modelin tek tek iç test sonuçları (macro F1 0.818 ve 0.821) biliniyordu.
+
+**8. Veri setinin kapsamı sınırlı.**
+Model yalnızca dermoskopi görüntüleriyle ve büyük ölçüde açık tenli hastalardan,
+iki merkezden (Avusturya ve Avustralya) toplanmış verilerle eğitildi. Dış test
+seti de dermoskopi görüntülerinden oluşuyor ve ISIC arşivinden geliyor; bu yüzden
+dış testteki sonuç, tamamen farklı bir klinikteki performansı garanti etmiyor.
+Normal telefon fotoğraflarında, farklı cihazlarda veya koyu ten tiplerinde
+performansı düşebilir. Model klinik olarak doğrulanmamıştır ve tanı aracı olarak
+kullanılmamalıdır.
 
 ## Tekrar üretme
 
