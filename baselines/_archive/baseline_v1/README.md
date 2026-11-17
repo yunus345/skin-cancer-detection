@@ -41,4 +41,4 @@ riskli ama mel_precision'ı düşürüyor).
 Bu klasörde doğrudan git'e dahil edildi (16MB) — Drive'a veya yerel
 diske bağımlı kalmadan kalıcı, garanti bir kopya olsun diye. Modeli
 yeniden yüklemek için: `src.evaluation.evaluate --checkpoint
-baselines/baseline_v1/best_model.pt`.
+baselines/_archive/baseline_v1/best_model.pt`.

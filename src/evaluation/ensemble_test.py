@@ -23,7 +23,7 @@ from src.evaluation.ensemble_val import MODELS, fit_temperature, load_split, sof
 from src.evaluation.evaluate import apply_threshold_override, bootstrap_ci, print_report, summarize
 
 OPERATING_POINTS = {'normal': None, 'tarama_mel_esik_0.30': 0.30}
-OUT_DIR = Path('baselines/ensemble_v1')
+OUT_DIR = Path('baselines/_archive/ensemble_v1')
 
 
 def resolve_recipe(recipe_path: str | None):

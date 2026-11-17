@@ -51,4 +51,4 @@ Git'e dahil edilmedi (`.gitignore`: `baselines/*/best_model.pt`). İki yerde:
 - Google Drive: `skin-cancer-detection-runs/archive/efficientnet_v2_s_v1/`
 
 Modeli yeniden yüklemek için: `src.evaluation.evaluate --checkpoint
-baselines/efficientnet_v2_s_v1/best_model.pt` (384px checkpoint'ten otomatik okunur).
+baselines/_archive/efficientnet_v2_s_v1/best_model.pt` (384px checkpoint'ten otomatik okunur).

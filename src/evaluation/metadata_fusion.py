@@ -60,7 +60,7 @@ def main():
     parser.parse_args()
 
     val_img, val_targets, labels, _ = image_ensemble_probs('val')
-    val_ids = np.load('baselines/convnext_tiny_v1/predictions.npz')['val_image_ids']
+    val_ids = np.load('baselines/_archive/convnext_tiny_v1/predictions.npz')['val_image_ids']
     train_ids = pd.read_csv('data/processed/manifest.csv').query("split == 'train'").image_id
     train_meta, val_meta = load_metadata('train', train_ids), load_metadata('val', val_ids)
     assert (val_meta.dx.map(labels.index).to_numpy() == val_targets).all()

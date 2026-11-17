@@ -195,7 +195,8 @@ sabit `v1` etiketiyle indirilir: [emreozkn/skin-lesion-convnext-v1](https://hugg
 - `src/inference/`: model paketleme, `Predictor` (tahmin ve Grad-CAM), paket doğrulaması, "emin değilim" eşiği.
 - `app.py`, `assets/examples/`: Gradio demosu ve örnek görüntüler. `hf/`: Hugging Face model kartı ve Space betiği.
 - `docs/`: bağımsız denetim raporu (2026-10-26).
-- `baselines/<deney>/`: her eğitilmiş modelin sonuçları ve README'si. `final_v1/` final tarif.
+- `baselines/final_v1/`: final tarif ve bütün sonuçları (ilk bakılacak yer). Yanındaki iki klasör final modelin
+  üyeleri (seed 42, seed 2). `baselines/_archive/`: final modelde kullanılmayan eski deneyler.
 - `splits/`: sabit bölme dosyası.
 - `external_test/`: dış test setinin etiketleri ve kuralları.
 - `kaggle/`: eğitim notebook'u (asıl eğitim ortamı). `notebooks/`: Colab yedeği.

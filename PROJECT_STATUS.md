@@ -9,6 +9,9 @@ yazılmaz): [docs/AUDIT_2026-10-26.md](docs/AUDIT_2026-10-26.md). Deney geçmiş
 iç test F1 0.829 / BA 0.832, dış test (ISIC 2018, ikinci bakış) F1 0.795 / BA 0.796.
 README, EXPERIMENTS.md ve sınırlamalar yazıldı. Temiz klonda iç test sonuçları birebir yeniden üretildi.
 
+`baselines/` düzenlendi (2026-11-17): final tarif + iki üye üstte, diğer 10 deney `baselines/_archive/`'de; bağımlı betiklerin
+çıktıları taşıma öncesiyle birebir aynı.
+
 A'dan kalanlar (B'yi bekletmez):
 - `requirements.txt` sürümleri: bir sonraki Kaggle koşusunda `pip freeze` alınacak.
 - Dersin teslim beklentisi (format, tarih, demo) öğrenilecek.

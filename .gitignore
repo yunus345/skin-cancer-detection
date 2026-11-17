@@ -15,8 +15,9 @@ __pycache__/
 
 # Buyuk agirlik dosyalari git'e girmiyor (GitHub 50MB ustunu onermiyor, 100MB ustunu
 # reddediyor); yerel diskte + Drive'daki skin-cancer-detection-runs/archive/ altinda duruyor.
-# baselines/baseline_v1/best_model.pt (16MB) bundan once eklendi, takipte kalmaya devam eder.
+# baselines/_archive/baseline_v1/best_model.pt (16MB) bundan once eklendi, takipte kalmaya devam eder.
 baselines/*/*.pt
+baselines/_archive/*/*.pt
 
 # VSCode
 .vscode/

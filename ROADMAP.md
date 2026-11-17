@@ -59,7 +59,7 @@
 - [x] Takip dışı dosyalar:
   - Small ve seed 2'nin `test_metrics.json` dosyaları "karar sonrası görüldü" notuyla commit edilir.
   - `AGENT_REPORT.md`'nin içeriği düzeltilerek `EXPERIMENTS.md`'ye taşınır.
-- [ ] Klasör düzeni (`baselines/_archive/` taşıması): **ertelendi.** Yol değişiklikleri kodu ve kayıtlı sonuçları bozma riski taşıyor, getirisi küçük. `baselines/final_v1/` zaten var.
+- [x] Klasör düzeni: `baselines/final_v1/` + iki üye üstte, 10 eski deney `baselines/_archive/`'de (2026-11-17). Kod yolları güncellendi; `ensemble_val` (calibrate, candidate, tta), `metadata_fusion`, `ensemble_test`, `freeze_recipe` çıktıları taşıma öncesiyle birebir aynı.
 
 ## A2. Final modeli dondur (sadece val) ✅
 - [x] Adaylar A (seed 42) ve B (iki seed ortalaması); seçim kuralı önceden yazıldı; B seçildi, tarama eşiği 0.28.

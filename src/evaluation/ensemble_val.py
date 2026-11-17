@@ -14,18 +14,18 @@ from src.evaluation.evaluate import apply_threshold_override
 from sklearn.metrics import balanced_accuracy_score, f1_score, precision_score, recall_score
 
 MODELS = {
-    'B0': 'baselines/baseline_v1/predictions.npz',
-    'ConvNeXt': 'baselines/convnext_tiny_v1/predictions.npz',
-    'V2-S': 'baselines/efficientnet_v2_s_v1/predictions.npz',
-    'Swin': 'baselines/swin_v2_t_v1/predictions.npz',
+    'B0': 'baselines/_archive/baseline_v1/predictions.npz',
+    'ConvNeXt': 'baselines/_archive/convnext_tiny_v1/predictions.npz',
+    'V2-S': 'baselines/_archive/efficientnet_v2_s_v1/predictions.npz',
+    'Swin': 'baselines/_archive/swin_v2_t_v1/predictions.npz',
 }
 
 
 # Mevcut ensemble'a aday yeni modeller (MODELS'e ancak validation karsilastirmasini gecerse girer).
 CANDIDATES = {
-    'ConvNeXt384': 'baselines/convnext_tiny_384_v1/predictions.npz',
-    'ConvNeXtISIC': 'baselines/convnext_tiny_isic2019_v1/predictions.npz',
-    'ConvNeXtTarif2': 'baselines/convnext_tiny_recipe2_v1/predictions.npz',
+    'ConvNeXt384': 'baselines/_archive/convnext_tiny_384_v1/predictions.npz',
+    'ConvNeXtISIC': 'baselines/_archive/convnext_tiny_isic2019_v1/predictions.npz',
+    'ConvNeXtTarif2': 'baselines/_archive/convnext_tiny_recipe2_v1/predictions.npz',
     'ConvNeXt22k384': 'baselines/convnext_tiny_in22k_384_v1/predictions.npz',
 }
 

@@ -41,4 +41,4 @@ ConvNeXt-Tiny ~28M parametre ile çok daha büyük). İki yerde güvende:
   (`latest/` her yeni Colab koşusunda üzerine yazıldığı için kalıcı kopya burada)
 
 Modeli yeniden yüklemek için: `src.evaluation.evaluate --checkpoint
-baselines/convnext_tiny_v1/best_model.pt`
+baselines/_archive/convnext_tiny_v1/best_model.pt`
