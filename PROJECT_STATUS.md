@@ -54,8 +54,12 @@ A'dan kalanlar (B'yi bekletmez):
 - [x] C0b: `train.py --cv-folds splits/cv5_v1.csv --fold k`. CV modunda `best_model.pt` yazılmaz; `last_model.pt` (son epoch) ve
   `oof_fold{k}.npz` (fold k'nin fp32 logit'leri) yazılır; test tahmin edilmez. Mac'te küçük denemede (5×40 görüntü, 1+1 epoch)
   OOF kimlikleri = fold k, test görüntüsü 0, OOF F1 = son epoch val F1.
+- [ ] C0c: Kaggle koşu 1 (fold 0, 1, 2) başladı 2026-11-17 17:04, Version 11 (https://www.kaggle.com/code/yunusemreozkan/skin-cancer-train).
+  Notebook artık test setini ölçmüyor; `pip freeze` alıyor. Koşu 2: fold 3, 4 (`FOLDS = [3, 4]`).
+- [x] C0d hazırlığı: `python -m src.evaluation.cv_summary --run-dir baselines/cv5_baseline [--lock-target]` (sahte veriyle test edildi;
+  hedef yalnızca 5 fold tamamken ve bir kez kilitlenir).
 
 ## Sıradaki tek adım
 
-**C0c: Kaggle notebook'unu CV için hazırlamak ve ilk fold'u koşmak.** Bir fold ~1 saat (30 epoch, T4), 5 fold ~5 saat.
-Önce kod GitHub'a push edilir (Kaggle oradan klonluyor), ilk koşuda `pip freeze` de alınır (A4).
+**C0c devam:** koşu 1 bitince çıktıyı `baselines/cv5_baseline/` altına indir (önce küçük dosyalar), fold 0-2 özetine bak, sonra koşu 2'yi
+(`FOLDS = [3, 4]`) gönder.

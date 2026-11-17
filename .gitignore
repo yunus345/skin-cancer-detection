@@ -18,6 +18,7 @@ __pycache__/
 # baselines/_archive/baseline_v1/best_model.pt (16MB) bundan once eklendi, takipte kalmaya devam eder.
 baselines/*/*.pt
 baselines/_archive/*/*.pt
+baselines/*/*/*.pt
 
 # VSCode
 .vscode/
