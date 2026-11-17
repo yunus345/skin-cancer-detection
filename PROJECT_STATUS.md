@@ -27,7 +27,8 @@ Proje geliştirilmeye devam ediyor (v2). Önce v1 kapatılacak, sonra ölçüm a
    - [x] Bölme dosyası git'te: `splits/ham10000_lesion_split_v1.csv` (MD5 `a5e29e8b4186db15209b31715fa3a94a`). `validate_manifest.py` üretilen bölme bundan saparsa hata veriyor.
    - [x] Final tarif val'de donduruldu: `baselines/final_v1/` (iki seed ortalaması, tarama eşiği 0.28)
    - [x] AUC eklendi; final_v1 tek ölçüm: iç test F1 0.829 / BA 0.832, dış test (ikinci bakış) F1 0.795 / BA 0.796
-   - [ ] README ve EXPERIMENTS.md
+   - [x] `EXPERIMENTS.md` yazıldı, `AGENT_REPORT.md` içeriği oraya taşındı (2026-11-17)
+   - [ ] `README.md` (sınırlamalar bölümünü sen yazacaksın), `requirements.txt` sabitleme, eski belgeler (`src/README.md`)
 2. Baseline 5-fold CV (~5 saat Kaggle); hedef burada kilitlenir
 3. Temiz dış test setini ayır (deneylerden önce)
 4. Deney 1: düzeltilmiş ek veri
@@ -35,7 +36,9 @@ Proje geliştirilmeye devam ediyor (v2). Önce v1 kapatılacak, sonra ölçüm a
 6. Deney 3: serbest
 7. Final: 5 fold ortalaması, iç test ve dış testte birer ölçüm
 
-**Sıradaki tek adım:** `README.md` ve `EXPERIMENTS.md` yazmak (v1 kapanışının son maddesi).
+Ayrıntılı yol haritası: `ROADMAP.md` (A: v1 kapanış, B: arayüz, en fazla 3 oturum, C: v2, D: isteğe bağlı). Bu bölümdeki bitiş kuralı `ROADMAP.md`'nin C aşamasına da yazıldı.
+
+**Sıradaki tek adım:** `README.md` taslağı (problem, veri, yöntem, sonuç tablosu); sınırlamalar bölümünü sen yazacaksın.
 
 ---
 

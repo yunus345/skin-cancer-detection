@@ -29,4 +29,9 @@ cetveli), (2) EMA ne kazandırıyor. Kaggle Version 10, T4, 2.2 dk/epoch. Kod: c
 3. **Small:** gürültünün içinde, 1.6 kat pahalı: kabul edilmedi.
 4. **Seed ensemble** (2 Tiny): melanom ayırmada ensemble_v1 seviyesi (73'e 70 alarm), F1 daha yüksek.
 
-Test sonuçlarına bakılmadı. Ağırlıklar yerel disk (111MB, git'te değil).
+Kararlar yalnızca val'e bakılarak verildi. Ağırlıklar yerel disk (111MB, git'te değil; Drive `archive/`'de kopyası var).
+
+Not (2026-11-17): bu koşunun ve Small'ın `test_metrics.json` dosyaları karar commit'inden önce de
+diskteydi (seed 2: 21:12), yani "test sonuçlarına bakılmadı" ifadesi doğrulanamıyor. Test: seed 2 F1 0.821,
+BA 0.830, melR 0.729; Small F1 0.816, BA 0.829, melR 0.682. Karardan önce görülüp görülmediği bilinmiyor
+(bkz. `EXPERIMENTS.md`).

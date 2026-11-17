@@ -10,4 +10,8 @@ Dosyalar: `best_model.pt` (en iyi epoch 25, val F1 0.801), `best_model_ema.pt` (
 0.794), `predictions.npz` / `predictions_ema.npz`. Ağırlıklar yerel disk (198MB, git'te değil).
 
 **Karar: Small kabul edilmedi.** F1 iki Tiny koşusunun arasında (son 5 epoch 0.780; Tiny 0.788 /
-0.775), maliyet 1.6 kat. Test sonuçlarına bakılmadı.
+0.775), maliyet 1.6 kat. Karar yalnızca val'e bakılarak verildi.
+
+Not (2026-11-17): `test_metrics.json` bu koşunun çıktısı olarak diskte (20:35) karar commit'inden
+(21:19) önce de vardı; yukarıdaki "test sonuçlarına bakılmadı" ifadesi doğrulanamıyor. Test: F1 0.816,
+BA 0.829, melR 0.682. Karardan önce görülüp görülmediği bilinmiyor (bkz. `EXPERIMENTS.md`).
