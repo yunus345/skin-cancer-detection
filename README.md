@@ -172,12 +172,29 @@ python -m src.evaluation.ensemble_test --recipe baselines/final_v1/recipe.json
 python -m src.evaluation.external_validation --recipe baselines/final_v1/recipe.json
 ```
 
+## Demo (Gradio)
+
+Görüntü yükleme, en olası 3 sınıf, normal ve tarama modu, "emin değilim" uyarısı (val'de seçilen eşik 0.85)
+ve Grad-CAM ısı haritası.
+
+```bash
+pip install gradio
+python app.py            # http://127.0.0.1:7860
+SHARE=1 python app.py    # geçici herkese açık link (72 saat, bilgisayar açıkken)
+```
+
+Yerelde `models/final_v1/` yoksa (`python -m src.inference.package_model` ile üretilir) model Hugging Face'ten,
+sabit `v1` etiketiyle indirilir: [emreozkn/skin-lesion-convnext-v1](https://huggingface.co/emreozkn/skin-lesion-convnext-v1).
+
 ## Dizin yapısı
 
 - `src/data/`: manifest oluşturma (tekrar eden görüntüleri temizler), lezyon bazlı bölme, doğrulama,
   `SkinCancerDataset`.
 - `src/training/train.py`: iki fazlı transfer learning.
 - `src/evaluation/`: metrikler, logit önbellekleme, ensemble, tarif dondurma, iç ve dış test.
+- `src/inference/`: model paketleme, `Predictor` (tahmin ve Grad-CAM), paket doğrulaması, "emin değilim" eşiği.
+- `app.py`, `assets/examples/`: Gradio demosu ve örnek görüntüler. `hf/`: Hugging Face model kartı ve Space betiği.
+- `docs/`: bağımsız denetim raporu (2026-10-26).
 - `baselines/<deney>/`: her eğitilmiş modelin sonuçları ve README'si. `final_v1/` final tarif.
 - `splits/`: sabit bölme dosyası.
 - `external_test/`: dış test setinin etiketleri ve kuralları.

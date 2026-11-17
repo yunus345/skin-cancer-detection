@@ -37,10 +37,10 @@ A'dan kalanlar (B'yi bekletmez):
   doktora yönlendirilir, emin olunanlarda doğruluk 0.954; ama 102 melanomdan 8'i "emin" iken kaçıyor.
 - [x] Model HF Hub'da: https://huggingface.co/emreozkn/skin-lesion-convnext-v1 (`v1` etiketi, model kartı). Ağırlıkların
   üçüncü kopyası. Hub'dan indirilen model MD5 kontrolünden geçti, yereldeki paketle aynı sonucu veriyor.
-- [ ] Kalıcı demo: Gradio Space ücretsiz CPU'da artık HF PRO istiyor (HTTP 402, 2026-11-17). **Karar:** şimdi para
-  harcanmıyor. Sunumdan ~1 hafta önce kalıcı link istenirse 1 aylık PRO + `python hf/build_space.py --out <klasör> --upload`
-  (v2 kazanırsa doğrudan v2 ile). Yedek: sunum günü `SHARE=1 .venv/bin/python app.py` (geçici herkese açık link, 72 saat,
-  Mac açıkken).
+- [ ] Kalıcı demo: Gradio Space ücretsiz CPU'da artık HF PRO istiyor (HTTP 402, 2026-11-17). **Karar (kullanıcı):** para
+  verilmeyecek. Kalıcı ve ücretsiz bir seçenek v2'den sonra, sunumdan önce araştırılacak (ör. kendi küçük site + ücretsiz
+  sunucu). Hiçbiri olmazsa sunum günü `SHARE=1 .venv/bin/python app.py` (geçici herkese açık link, 72 saat, Mac açıkken).
+  Space dosyaları hazır: `hf/build_space.py`.
 
 **Aşama B kapandı** (yerel demo çalışıyor; kalıcı link sunuma bırakıldı).
 

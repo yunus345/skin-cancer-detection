@@ -111,7 +111,7 @@
 ## B3. (İsteğe bağlı) Giriş kontrolü
 - [ ] "Dermoskopi görüntüsü mü?" ön filtresi. Basit bir yöntemle başlanır (OOD skoru veya küçük bir ikili sınıflandırıcı).
 
-> **2026-11-17 durumu:** Gradio Space ücretsiz CPU'da PRO istiyor (HTTP 402). Kalıcı link sunumdan ~1 hafta önce (1 aylık PRO, `hf/build_space.py`) ya da sunum günü `SHARE=1` geçici linki. B bu haliyle kapatıldı.
+> **2026-11-17 durumu:** Gradio Space ücretsiz CPU'da PRO istiyor (HTTP 402). Kullanıcı ücret ödemek istemiyor: kalıcı ve ücretsiz seçenek v2'den sonra araştırılacak; olmazsa sunum günü `SHARE=1` geçici linki. B bu haliyle kapatıldı.
 
 **✅ B aşaması bitti sayılır:** Spaces linki çalışıyor, README'de demo linki ve ekran görüntüsü var.
 
