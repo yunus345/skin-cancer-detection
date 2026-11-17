@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
 import time
@@ -332,7 +333,9 @@ def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader,
         if metrics['f1'] > state['best_f1']:
             state['best_f1'] = metrics['f1']
             state['best_metrics'] = metrics
-            save_checkpoint(model, state, metrics, out_dir / 'best_model.pt')
+            # CV modunda en iyi epoch kaydedilmez: fold icinde secim yapmak OOF skorunu sisirir (ROADMAP C).
+            if state['save_best']:
+                save_checkpoint(model, state, metrics, out_dir / 'best_model.pt')
             state['epochs_without_improvement'] = 0
         else:
             state['epochs_without_improvement'] += 1
@@ -340,6 +343,59 @@ def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader,
                 print(f'Early stopping during {phase_name} after {state["global_epoch"]} epochs.')
                 return True
     return False
+
+
+def build_cv_datasets(manifest_path: str, cv_folds: str, fold: int, image_size: int, augmentation: str):
+    """CV fold'u icin (train, val) dataset'leri. Uyelik manifest'in `split` sutunundan degil, kayitli CV
+    dosyasindan gelir: fold == k dogrulama (OOF), diger fold'lar egitim. Test satirlari hicbirine girmez."""
+    folds = {}
+    with open(cv_folds, newline='') as f:
+        for row in csv.DictReader(f):
+            folds[row['image_id']] = int(row['fold'])
+    if fold not in set(folds.values()):
+        raise ValueError(f'--fold {fold} {cv_folds} icinde yok')
+
+    train_dataset = SkinCancerDataset(manifest_path, transform=build_transforms(image_size, train=True, augmentation=augmentation))
+    val_dataset = SkinCancerDataset(manifest_path, transform=build_transforms(image_size))
+    all_rows = train_dataset.manifest
+    test_ids = {row['image_id'] for row in all_rows if str(row.get('split', '')).lower() == 'test'}
+    assert not test_ids & set(folds), 'CV dosyasinda test goruntusu var'
+    train_dataset.manifest = [row for row in all_rows if row['image_id'] in folds and folds[row['image_id']] != fold]
+    val_dataset.manifest = [row for row in all_rows if folds.get(row['image_id']) == fold]
+    # CV dosyasindaki her goruntu manifest'te bulunmali; eksik varsa fold'lar sessizce kuculur.
+    expected = sum(1 for k in folds.values() if k == fold)
+    assert len(val_dataset) == expected, f'fold {fold}: CV dosyasinda {expected}, manifest\'te {len(val_dataset)} goruntu'
+    assert len(train_dataset) + len(val_dataset) == len(folds), 'CV goruntulerinin bir kismi manifest\'te yok'
+    return train_dataset, val_dataset
+
+
+def save_cv_outputs(model, state, val_dataset, loader_kwargs, device, out_dir: Path, fold: int, seed: int):
+    """Son epoch modelini ve fold'un OOF logit'lerini kaydeder. Logit'ler AMP'siz (fp32) hesaplanir:
+    v1'de Kaggle fp16 ile Mac fp32 arasinda val F1'de 0.009 fark cikmisti; burada kaynaginda kapaniyor.
+    Test seti bilerek tahmin edilmez (test logit'i diskte olmazsa erken bakilamaz)."""
+    last_metrics = state['history'][-1]
+    save_checkpoint(model, state, last_metrics, out_dir / 'last_model.pt')
+
+    loader = DataLoader(val_dataset, shuffle=False, **{**loader_kwargs, 'persistent_workers': False})
+    model.eval()
+    logits, targets = [], []
+    with torch.no_grad():
+        for images, batch_labels in loader:
+            logits.append(model(images.to(device)).float().cpu().numpy())
+            targets.extend(batch_labels.tolist())
+    logits = np.concatenate(logits)
+    np.savez(
+        out_dir / f'oof_fold{fold}.npz',
+        logits=logits, targets=np.array(targets),
+        image_ids=np.array([row['image_id'] for row in val_dataset.manifest]),
+        labels=np.array(state['labels']), fold=fold, seed=seed,
+        architecture=state['architecture'], image_size=state['image_size'],
+    )
+    (out_dir / 'metrics.json').write_text(json.dumps(last_metrics, indent=2))
+    (out_dir / 'training_history.json').write_text(json.dumps(state['history'], indent=2))
+    oof_f1 = f1_score(targets, logits.argmax(1), average='macro', zero_division=0)
+    print(f'Fold {fold}: son epoch val_f1={last_metrics["f1"]:.4f}, OOF (fp32) macro F1={oof_f1:.4f}')
+    print(f'Wrote {out_dir / "last_model.pt"}, {out_dir / f"oof_fold{fold}.npz"}')
 
 
 def train_model(
@@ -364,6 +420,8 @@ def train_model(
     warmup_epochs: int = 2,
     drop_path_rate: float = 0.1,
     ema_decay: float = 0.0,
+    cv_folds: str | None = None,
+    fold: int | None = None,
 ):
     torch.manual_seed(seed)
     device = select_device(device_arg)
@@ -378,8 +436,12 @@ def train_model(
     print(f'Recipe: lr={learning_rate:.0e}/{finetune_lr:.0e}, scheduler={scheduler_name} (warmup {warmup_epochs}), label_smoothing={label_smoothing}, patience={patience}')
     print(f'seed={seed}, drop_path_rate={drop_path_rate} (sadece timm modelleri), ema_decay={ema_decay or "kapali"}')
 
-    train_dataset = SkinCancerDataset(manifest_path, split='train', transform=build_transforms(image_size, train=True, augmentation=augmentation))
-    val_dataset = SkinCancerDataset(manifest_path, split='val', transform=build_transforms(image_size))
+    if cv_folds is None:
+        train_dataset = SkinCancerDataset(manifest_path, split='train', transform=build_transforms(image_size, train=True, augmentation=augmentation))
+        val_dataset = SkinCancerDataset(manifest_path, split='val', transform=build_transforms(image_size))
+    else:
+        train_dataset, val_dataset = build_cv_datasets(manifest_path, cv_folds, fold, image_size, augmentation)
+        print(f'CV: {cv_folds} fold {fold} -> train {len(train_dataset)}, val (OOF) {len(val_dataset)} goruntu')
 
     if len(train_dataset) == 0 or len(val_dataset) == 0:
         raise ValueError('Manifest must contain non-empty train/val splits. Run src.data.split_manifest first.')
@@ -429,6 +491,7 @@ def train_model(
         'ema': None,
         'best_ema_f1': -1.0,
         'best_ema_metrics': None,
+        'save_best': cv_folds is None,
     }
     if ema_decay > 0:
         from timm.utils import ModelEmaV3
@@ -473,6 +536,10 @@ def train_model(
             model, 'finetune', finetune_epochs, optimizer, scheduler,
             train_loader, val_loader, criterion, device, out_dir, state, scaler,
         )
+
+    if cv_folds is not None:
+        save_cv_outputs(model, state, val_dataset, loader_kwargs, device, out_dir, fold, seed)
+        return
 
     final_metrics = state['best_metrics'] or evaluate(model, val_loader, device, criterion)
     checkpoint_path = out_dir / 'baseline_model.pt'
@@ -532,7 +599,11 @@ def main():
     parser.add_argument('--drop-path', type=float, default=0.1, help='Stochastic depth orani (sadece timm modelleri)')
     parser.add_argument('--ema-decay', type=float, default=0.0,
                         help='>0 ise agirliklarin EMA kopyasi da tutulur ve her epoch val de olculur (or. 0.999; 0 = kapali)')
+    parser.add_argument('--cv-folds', default=None, help='CV bolme dosyasi (or. splits/cv5_v1.csv); verilirse --fold zorunlu')
+    parser.add_argument('--fold', type=int, default=None, help='Dogrulama (OOF) fold\'u; digerleri egitim. Son epoch kaydedilir.')
     args = parser.parse_args()
+    if (args.cv_folds is None) != (args.fold is None):
+        parser.error('--cv-folds ve --fold birlikte verilmeli')
 
     finetune_lr = args.finetune_lr if args.finetune_lr is not None else args.learning_rate / 10
     image_size = args.image_size or NATIVE_IMAGE_SIZE[args.architecture]
@@ -559,6 +630,8 @@ def main():
         warmup_epochs=args.warmup_epochs,
         drop_path_rate=args.drop_path,
         ema_decay=args.ema_decay,
+        cv_folds=args.cv_folds,
+        fold=args.fold,
     )
 
 

@@ -51,8 +51,11 @@ A'dan kalanlar (B'yi bekletmez):
 
 - [x] C0a: `splits/cv5_v1.csv` (MD5 `e8e35f94bd974356390d3f2aba045587`), `python -m src.data.make_cv_folds`. Train+val = 9029 görüntü,
   6723 lezyon, 5 fold (~1806 görüntü); lezyon iki fold'da yok, test (986) dışarıda; sınıf oranları fold'lar arasında ±0.001.
+- [x] C0b: `train.py --cv-folds splits/cv5_v1.csv --fold k`. CV modunda `best_model.pt` yazılmaz; `last_model.pt` (son epoch) ve
+  `oof_fold{k}.npz` (fold k'nin fp32 logit'leri) yazılır; test tahmin edilmez. Mac'te küçük denemede (5×40 görüntü, 1+1 epoch)
+  OOF kimlikleri = fold k, test görüntüsü 0, OOF F1 = son epoch val F1.
 
 ## Sıradaki tek adım
 
-**C0b: eğitim kodunu CV'ye hazırlamak.** `train.py`'ye `--fold k` seçeneği (fold k doğrulama, diğer 4 fold eğitim), en iyi epoch
-yerine **son epoch**'un kaydı ve OOF tahminlerinin (fold k'nin logit'leri) kaydı. Önce Mac'te 1 epoch'luk küçük bir deneme.
+**C0c: Kaggle notebook'unu CV için hazırlamak ve ilk fold'u koşmak.** Bir fold ~1 saat (30 epoch, T4), 5 fold ~5 saat.
+Önce kod GitHub'a push edilir (Kaggle oradan klonluyor), ilk koşuda `pip freeze` de alınır (A4).
