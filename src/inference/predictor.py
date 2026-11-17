@@ -64,6 +64,58 @@ class Predictor:
         tarama = self.mel_idx if probs[self.mel_idx] >= self.mel_threshold else normal
         return {'normal': self.labels[normal], 'tarama': self.labels[tarama]}
 
+    def gradcam(self, pil_image, class_name: str | None = None) -> tuple[np.ndarray, str]:
+        """Grad-CAM: modelin `class_name` skorunu en cok hangi bolgelerin artirdigi. Varsayilan sinif:
+        ensemble'in normal karari. Tek uye uzerinde hesaplanir (config 'gradcam.member').
+
+        Doner: (orijinal goruntu boyutunda 0-1 arasi isi haritasi (H, W), sinif adi).
+        """
+        member = self.config['gradcam']['member']
+        model = self.models[member]
+        layer = model.get_submodule(self.config['gradcam']['target_layer'])
+        if class_name is None:
+            class_name = self.predict(pil_image)['decision']['normal']
+        class_idx = self.labels.index(class_name)
+
+        saved = {}
+
+        # Ileri geciste son asamanin ciktisini (N, 768, 12, 12) ve ona gelen gradyani yakaliyoruz.
+        # Dikkat: forward hook bir deger dondururse katmanin ciktisi onunla DEGISIR; bu yuzden None doner.
+        def keep_activation(module, inputs, output):
+            saved['act'] = output
+            output.register_hook(lambda grad: saved.__setitem__('grad', grad))
+
+        handle = layer.register_forward_hook(keep_activation)
+        try:
+            image = self.transform(pil_image.convert('RGB')).unsqueeze(0).to(self.device)
+            with torch.enable_grad():
+                score = model(image)[0, class_idx]  # softmax oncesi logit: diger siniflardan bagimsiz
+                model.zero_grad()
+                score.backward()
+        finally:
+            handle.remove()
+
+        # Her kanalin agirligi = o kanalin gradyaninin uzaysal ortalamasi ("bu harita skoru ne kadar artiriyor").
+        weights = saved['grad'].mean(dim=(2, 3), keepdim=True)
+        cam = torch.relu((weights * saved['act']).sum(dim=1))[0]  # sadece skoru ARTIRAN bolgeler
+        cam = cam / (cam.max() + 1e-8)
+        # Model goruntuyu kareye sikistirilmis gordu; harita orijinal en-boy oranina geri geriliyor.
+        width, height = pil_image.size
+        cam = torch.nn.functional.interpolate(cam[None, None], size=(height, width), mode='bilinear',
+                                              align_corners=False)[0, 0]
+        return cam.detach().cpu().numpy(), class_name
+
+    @staticmethod
+    def overlay(pil_image, heatmap: np.ndarray, alpha: float = 0.4):
+        """Isi haritasini (0-1) goruntunun ustune renkli bindirir; PIL goruntu doner."""
+        from matplotlib import colormaps
+        from PIL import Image
+
+        colored = colormaps['jet'](heatmap)[..., :3]  # (H, W, 3), 0-1
+        base = np.asarray(pil_image.convert('RGB'), dtype=np.float32) / 255.0
+        blended = (1 - alpha) * base + alpha * colored
+        return Image.fromarray((blended * 255).astype(np.uint8))
+
     def predict(self, pil_image) -> dict:
         tensor = self.transform(pil_image.convert('RGB')).unsqueeze(0)
         probs, member_probs = self.predict_tensor(tensor)

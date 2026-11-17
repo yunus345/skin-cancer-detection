@@ -102,7 +102,7 @@
 ## B2. Gradio uygulaması (Hugging Face Spaces)
 - [ ] Görüntü yükleme ve HAM10000'den birkaç örnek görüntü.
 - [ ] En olası 3 sınıf ve olasılıkları.
-- [ ] Grad-CAM ısı haritası.
+- [x] Grad-CAM ısı haritası. (`Predictor.gradcam`, 2026-11-17; arayüze bağlanması B2b'de.)
 - [ ] Normal / tarama modu seçimi.
 - [ ] "Emin değilim" kuralı: en yüksek olasılık eşiğin altındaysa tahmin yerine "doktor incelemesi önerilir" uyarısı. Eşik val'de belirlenir.
 - [ ] Sabit uyarılar: "Araştırma amaçlıdır, tanı aracı değildir. Gerçek hasta görüntüsü yüklemeyin."

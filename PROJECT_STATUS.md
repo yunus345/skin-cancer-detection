@@ -30,9 +30,11 @@ A'dan kalanlar (B'yi bekletmez):
 - [x] B1 model paketi: `python -m src.inference.package_model` → `models/final_v1/` (git'te değil). Arayüz yalnızca
   `src.inference.predictor.Predictor`'ı kullanır. `python -m src.inference.verify_package`: val'de 992 görüntünün
   olasılıkları kayıtlı sayılarla aynı (MPS'te fark 0, CPU'da 1e-7), kararların %100'ü aynı.
+- [x] B2a Grad-CAM: `Predictor.gradcam()` + `overlay()`, seed 42 üzerinde, elle yazıldı (kütüphane yok). Val'de her sınıftan
+  bir görüntüde haritalar lezyonun üstünde; sınıfa göre değişiyor (mel/bkl korelasyon -0.01, mel/nv 0.53). Mac'te ~0.2 s.
 - [ ] Hugging Face Hub'a yükleme: Spaces aşamasında (hesap ve token gerekiyor).
 
 ## Sıradaki tek adım
 
-**B2a: Grad-CAM.** `Predictor`'a, seed 42 modeli üzerinde bir ısı haritası üreten fonksiyon eklemek ve birkaç val
-görüntüsünde göz kontrolü yapmak. Gradio arayüzü bundan sonra.
+**B2b: Gradio uygulaması (yerelde).** Görüntü yükleme + örnek görüntüler, ilk 3 sınıf, Grad-CAM, normal/tarama seçimi,
+sabit uyarılar, model sürümü ve metrikler. "Emin değilim" eşiği val'de belirlenecek. Spaces'e yükleme bundan sonra.
