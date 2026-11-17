@@ -130,23 +130,26 @@ def seed_augmentations_per_worker(worker_id):
     worker_info.dataset.transform.compose.set_random_seed(worker_info.seed)
 
 
-def build_model(num_classes: int, architecture: str = 'efficientnet_b0', drop_path_rate: float = 0.1):
+def build_model(num_classes: int, architecture: str = 'efficientnet_b0', drop_path_rate: float = 0.1,
+                pretrained: bool = True):
+    # pretrained=False: ImageNet agirliklari indirilmez. Kendi checkpoint'imizi hemen ardindan
+    # yukleyecegimiz yerlerde (arayuz, src/inference) gereksiz indirmeyi ve internet bagimliligini onler.
     # CNN'ler son katmanini `classifier` adli bir Sequential icinde tutuyor (Linear'in indeksi farkli:
     # EfficientNet B0/V2: [1], ConvNeXt: LayerNorm+Flatten sonrasi [2]); Swin'de ise tek bir `head` Linear'i.
     if architecture == 'efficientnet_b0':
-        model = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
+        model = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT if pretrained else None)
         in_features = model.classifier[1].in_features
         model.classifier[1] = nn.Linear(in_features, num_classes)
     elif architecture == 'efficientnet_v2_s':
-        model = efficientnet_v2_s(weights=EfficientNet_V2_S_Weights.DEFAULT)
+        model = efficientnet_v2_s(weights=EfficientNet_V2_S_Weights.DEFAULT if pretrained else None)
         in_features = model.classifier[1].in_features
         model.classifier[1] = nn.Linear(in_features, num_classes)
     elif architecture == 'convnext_tiny':
-        model = convnext_tiny(weights=ConvNeXt_Tiny_Weights.DEFAULT)
+        model = convnext_tiny(weights=ConvNeXt_Tiny_Weights.DEFAULT if pretrained else None)
         in_features = model.classifier[2].in_features
         model.classifier[2] = nn.Linear(in_features, num_classes)
     elif architecture == 'swin_v2_t':
-        model = swin_v2_t(weights=Swin_V2_T_Weights.DEFAULT)
+        model = swin_v2_t(weights=Swin_V2_T_Weights.DEFAULT if pretrained else None)
         model.head = nn.Linear(model.head.in_features, num_classes)
     elif architecture in TIMM_MODELS:
         import timm  # sadece timm modelleri icin gerekli
@@ -157,7 +160,7 @@ def build_model(num_classes: int, architecture: str = 'efficientnet_b0', drop_pa
         # duzenlilestirilmis bir model egitmis oluruz (2026-10-19'da Version 7 bu yuzden iptal edildi).
         # Daha buyuk modeller ezberlemeye daha yatkin; Small icin --drop-path 0.2 kullanildi.
         # Sadece egitimde etkili: degerlendirmede (model.eval()) hicbir blok atlanmaz.
-        model = timm.create_model(TIMM_MODELS[architecture], pretrained=True, num_classes=num_classes,
+        model = timm.create_model(TIMM_MODELS[architecture], pretrained=pretrained, num_classes=num_classes,
                                   drop_path_rate=drop_path_rate)
     else:
         raise ValueError(f'Bilinmeyen mimari: {architecture}')

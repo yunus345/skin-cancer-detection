@@ -95,9 +95,9 @@
 > **Süre sınırı: en fazla 3 oturum.** Bitmeyen kısım (B3 dahil) v2 sonrasına bırakılır. Grad-CAM tek model (seed 42) üzerinde gösterilir ve ekranda belirtilir.
 
 ## B1. Model paketleme
-- [ ] Model klasörü: `weights.pt` ve `config.json`. Config şunları içerir: mimari adı, görüntü boyutu, sınıf listesi, T, melanom eşiği, sürüm, Grad-CAM hedef katmanı.
+- [x] (2026-11-17, `src/inference/package_model.py` → `models/final_v1/`: `seed42.pt`, `seed2.pt`, `config.json`; `verify_package.py` val'de kayıtlı olasılıklarla birebir aynı) Model klasörü: `weights.pt` ve `config.json`. Config şunları içerir: mimari adı, görüntü boyutu, sınıf listesi, T, melanom eşiği, sürüm, Grad-CAM hedef katmanı.
 - [ ] Hugging Face Hub'a sürüm etiketiyle yüklenir (`v1`).
-- [ ] Ön işleme (Gray-World ve normalizasyon) `src/` içindeki koddan doğrudan import edilir, kopyalanmaz.
+- [x] Ön işleme (Gray-World ve normalizasyon) `src/` içindeki koddan doğrudan import edilir, kopyalanmaz.
 
 ## B2. Gradio uygulaması (Hugging Face Spaces)
 - [ ] Görüntü yükleme ve HAM10000'den birkaç örnek görüntü.

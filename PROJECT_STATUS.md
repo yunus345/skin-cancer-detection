@@ -25,7 +25,14 @@ A'dan kalanlar (B'yi bekletmez):
 
 **Sıra:** A (v1 kapanış) → B (arayüz, en fazla 3 oturum) → C (v2: baseline CV, temiz dış test, en fazla 3 deney, final) → D (isteğe bağlı).
 
+## Aşama B (arayüz) durumu
+
+- [x] B1 model paketi: `python -m src.inference.package_model` → `models/final_v1/` (git'te değil). Arayüz yalnızca
+  `src.inference.predictor.Predictor`'ı kullanır. `python -m src.inference.verify_package`: val'de 992 görüntünün
+  olasılıkları kayıtlı sayılarla aynı (MPS'te fark 0, CPU'da 1e-7), kararların %100'ü aynı.
+- [ ] Hugging Face Hub'a yükleme: Spaces aşamasında (hesap ve token gerekiyor).
+
 ## Sıradaki tek adım
 
-**B1: model paketleme.** final_v1'in iki modelini arayüzün okuyacağı biçime getirmek: `weights.pt` + `config.json`
-(mimari, görüntü boyutu, sınıflar, T değerleri, melanom eşiği, sürüm).
+**B2a: Grad-CAM.** `Predictor`'a, seed 42 modeli üzerinde bir ısı haritası üreten fonksiyon eklemek ve birkaç val
+görüntüsünde göz kontrolü yapmak. Gradio arayüzü bundan sonra.
