@@ -35,9 +35,16 @@ A'dan kalanlar (B'yi bekletmez):
 - [x] B2b Gradio uygulaması (`python app.py`, yerelde): ilk 3 sınıf, karar, normal/tarama, Grad-CAM ve sınıf seçimi,
   uyarılar, metrikler. "Emin değilim" eşiği val'de τ = 0.85 (`baselines/final_v1/uncertainty.json`): vakaların %24'ü
   doktora yönlendirilir, emin olunanlarda doğruluk 0.954; ama 102 melanomdan 8'i "emin" iken kaçıyor.
-- [ ] Hugging Face Hub'a yükleme: Spaces aşamasında (hesap ve token gerekiyor).
+- [x] Model HF Hub'da: https://huggingface.co/emreozkn/skin-lesion-convnext-v1 (`v1` etiketi, model kartı). Ağırlıkların
+  üçüncü kopyası. Hub'dan indirilen model MD5 kontrolünden geçti, yereldeki paketle aynı sonucu veriyor.
+- [ ] Kalıcı demo: Gradio Space ücretsiz CPU'da artık HF PRO istiyor (HTTP 402, 2026-11-17). **Karar:** şimdi para
+  harcanmıyor. Sunumdan ~1 hafta önce kalıcı link istenirse 1 aylık PRO + `python hf/build_space.py --out <klasör> --upload`
+  (v2 kazanırsa doğrudan v2 ile). Yedek: sunum günü `SHARE=1 .venv/bin/python app.py` (geçici herkese açık link, 72 saat,
+  Mac açıkken).
+
+**Aşama B kapandı** (yerel demo çalışıyor; kalıcı link sunuma bırakıldı).
 
 ## Sıradaki tek adım
 
-**B2c: Hugging Face Spaces'e yükleme.** Ağırlıklar HF Hub model deposuna (`v1`), uygulama bir Space'e. Hugging Face
-hesabı ve yazma yetkili token gerekiyor. Sonra README'ye demo linki ve ekran görüntüsü.
+**C0a: 5-fold CV bölme dosyası.** Train+val birleştirilir (iç test dokunulmaz), `StratifiedGroupKFold` (grup `lesion_id`,
+katman `label`) ile 5 fold, `splits/cv5_v1.csv`. Kaggle'a henüz gerek yok.

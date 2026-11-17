@@ -52,7 +52,7 @@
 
 ## A1. Güvenlik ve repo düzeni
 - [x] Ağırlıklar Drive `archive/`'e kopyalandı, MD5'ler eşleşti ve `baselines/final_v1/README.md`'de. (2026-11-12)
-- [ ] Ağırlıkların üçüncü kopyası: GitHub Release veya Hugging Face Hub. B1 ile birlikte yapılabilir.
+- [x] Ağırlıkların üçüncü kopyası: Hugging Face Hub `emreozkn/skin-lesion-convnext-v1` (`v1`), 2026-11-17.
 - [x] Denetim raporunu `docs/AUDIT_2026-10-26.md` dosyasına taşı. `PROJECT_STATUS.md`'yi kısa formata çevir. (Yapıldı 2026-11-17.)
 - [x] `.gitignore`: `baselines/*/*.pt`.
 - [x] Split dosyası: `splits/ham10000_lesion_split_v1.csv`, MD5 `a5e29e8b4186db15209b31715fa3a94a`. `validate_manifest.py` bölme bundan saparsa hata veriyor.
@@ -96,7 +96,7 @@
 
 ## B1. Model paketleme
 - [x] (2026-11-17, `src/inference/package_model.py` → `models/final_v1/`: `seed42.pt`, `seed2.pt`, `config.json`; `verify_package.py` val'de kayıtlı olasılıklarla birebir aynı) Model klasörü: `weights.pt` ve `config.json`. Config şunları içerir: mimari adı, görüntü boyutu, sınıf listesi, T, melanom eşiği, sürüm, Grad-CAM hedef katmanı.
-- [ ] Hugging Face Hub'a sürüm etiketiyle yüklenir (`v1`).
+- [x] Hugging Face Hub'a sürüm etiketiyle yüklenir (`v1`).
 - [x] Ön işleme (Gray-World ve normalizasyon) `src/` içindeki koddan doğrudan import edilir, kopyalanmaz.
 
 ## B2. Gradio uygulaması (Hugging Face Spaces)
@@ -110,6 +110,8 @@
 
 ## B3. (İsteğe bağlı) Giriş kontrolü
 - [ ] "Dermoskopi görüntüsü mü?" ön filtresi. Basit bir yöntemle başlanır (OOD skoru veya küçük bir ikili sınıflandırıcı).
+
+> **2026-11-17 durumu:** Gradio Space ücretsiz CPU'da PRO istiyor (HTTP 402). Kalıcı link sunumdan ~1 hafta önce (1 aylık PRO, `hf/build_space.py`) ya da sunum günü `SHARE=1` geçici linki. B bu haliyle kapatıldı.
 
 **✅ B aşaması bitti sayılır:** Spaces linki çalışıyor, README'de demo linki ve ekran görüntüsü var.
 
