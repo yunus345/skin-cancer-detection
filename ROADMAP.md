@@ -44,19 +44,19 @@
 > Yeni eğitim yok, GPU gerekmiyor. Hedef süre: 2–3 oturum.
 
 ## A0. Kararlar (kullanıcı onaylar)
-- [ ] Hedef: "İç testte F1 ≥ 0.80 ve BA ≥ 0.80, dış test dürüstçe raporlanır". BA ≥ 0.85 hedefi bırakılır.
-- [ ] Ana metrik: macro F1. BA, macro precision ve melanom recall'u da raporlanır.
-- [ ] Train+val ile yeniden eğitim planı iptal edilir.
+- [x] Hedef: "İç testte F1 ≥ 0.80 ve BA ≥ 0.80, dış test dürüstçe raporlanır". BA ≥ 0.85 hedefi bırakılır.
+- [x] Ana metrik: macro F1. BA, macro precision ve melanom recall'u da raporlanır.
+- [x] Train+val ile yeniden eğitim planı iptal edilir.
 - [ ] Dersin teslim beklentisi (format, tarih, demo) öğrenilir ve buraya not edilir.
-- [ ] Kontrol: tarif v2 iki aşamalı mı (donuk backbone + fine-tune), yoksa warmup ile tek aşamalı mı? Gerçekte ne uygulandığı koddan doğrulanıp README'ye yazılır.
+- [x] Kontrol: tarif v2 iki aşamalı mı (donuk backbone + fine-tune), yoksa warmup ile tek aşamalı mı? Gerçekte ne uygulandığı koddan doğrulanıp README'ye yazılır. (Doğrulandı: iki fazlı, 5 epoch donuk + 25 epoch warmup/cosine; README "Yöntem".)
 
 ## A1. Güvenlik ve repo düzeni
 - [x] Ağırlıklar Drive `archive/`'e kopyalandı, MD5'ler eşleşti ve `baselines/final_v1/README.md`'de. (2026-11-12)
 - [ ] Ağırlıkların üçüncü kopyası: GitHub Release veya Hugging Face Hub. B1 ile birlikte yapılabilir.
-- [ ] Denetim raporunu `docs/AUDIT_2026-10-26.md` dosyasına taşı. `PROJECT_STATUS.md`'yi kısa formata çevir. (Şu an rapor `PROJECT_STATUS.md`'nin "Güncel plan" bölümünün altında.)
+- [x] Denetim raporunu `docs/AUDIT_2026-10-26.md` dosyasına taşı. `PROJECT_STATUS.md`'yi kısa formata çevir. (Şu an rapor `PROJECT_STATUS.md`'nin "Güncel plan" bölümünün altında.) (Yapıldı 2026-11-17.)
 - [x] `.gitignore`: `baselines/*/*.pt`.
 - [x] Split dosyası: `splits/ham10000_lesion_split_v1.csv`, MD5 `a5e29e8b4186db15209b31715fa3a94a`. `validate_manifest.py` bölme bundan saparsa hata veriyor.
-- [ ] Takip dışı dosyalar:
+- [x] Takip dışı dosyalar:
   - Small ve seed 2'nin `test_metrics.json` dosyaları "karar sonrası görüldü" notuyla commit edilir.
   - `AGENT_REPORT.md`'nin içeriği düzeltilerek `EXPERIMENTS.md`'ye taşınır.
 - [ ] Klasör düzeni (`baselines/_archive/` taşıması): **ertelendi.** Yol değişiklikleri kodu ve kayıtlı sonuçları bozma riski taşıyor, getirisi küçük. `baselines/final_v1/` zaten var.
@@ -71,19 +71,19 @@
 
 ## A4. Tekrarlanabilirlik
 - [ ] `requirements.txt` versiyonları Kaggle koşusunun `pip freeze` çıktısından sabitlenir.
-- [ ] Final eğitim ve değerlendirme komutları tek blok halinde README'ye yazılır.
-- [ ] Temiz bir klonda değerlendirme komutunun çalıştığı doğrulanır.
+- [x] Final eğitim ve değerlendirme komutları tek blok halinde README'ye yazılır.
+- [x] Temiz bir klonda değerlendirme komutunun çalıştığı doğrulanır. (2026-11-17: iç test birebir yeniden üretildi; dış test görüntü gerektirdiği için klonda çalıştırılmadı.)
 
 ## A5. Belgeleme
-- [ ] `README.md`: problem, veri, yöntem, sonuç tablosu, sınırlamalar.
-- [ ] **Sınırlamalar bölümünü kullanıcı kendisi yazar.** Ajan sadece taslak madde listesi verir:
+- [x] `README.md`: problem, veri, yöntem, sonuç tablosu, sınırlamalar.
+- [x] **Sınırlamalar bölümünü kullanıcı kendisi yazar.** Ajan sadece taslak madde listesi verir:
   - Test seti geliştirme sırasında görüldü (K1).
   - Dış test erken kullanıldı (O1).
   - Değişiklikler ablation'sız yapıldı (O7).
   - Hasta kimliği yok (D1).
   - Değişkenlik sadece 2 seed ile ölçüldü.
-- [ ] `EXPERIMENTS.md`: deney geçmişi, denetimin 5. bölümü temel alınır.
-- [ ] Eskimiş belgeler temizlenir (`src/README.md`, README'deki "en iyi sonuç"). `git status` temiz olmalı.
+- [x] `EXPERIMENTS.md`: deney geçmişi, denetimin 5. bölümü temel alınır.
+- [x] Eskimiş belgeler temizlenir (`src/README.md`, README'deki "en iyi sonuç"). `git status` temiz olmalı.
 
 **✅ A aşaması bitti sayılır:** final_v1 dondurulmuş ve ölçülmüş, ağırlıklar iki yerde, README güncel.
 
