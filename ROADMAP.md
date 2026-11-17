@@ -53,7 +53,7 @@
 ## A1. Güvenlik ve repo düzeni
 - [x] Ağırlıklar Drive `archive/`'e kopyalandı, MD5'ler eşleşti ve `baselines/final_v1/README.md`'de. (2026-11-12)
 - [ ] Ağırlıkların üçüncü kopyası: GitHub Release veya Hugging Face Hub. B1 ile birlikte yapılabilir.
-- [x] Denetim raporunu `docs/AUDIT_2026-10-26.md` dosyasına taşı. `PROJECT_STATUS.md`'yi kısa formata çevir. (Şu an rapor `PROJECT_STATUS.md`'nin "Güncel plan" bölümünün altında.) (Yapıldı 2026-11-17.)
+- [x] Denetim raporunu `docs/AUDIT_2026-10-26.md` dosyasına taşı. `PROJECT_STATUS.md`'yi kısa formata çevir. (Yapıldı 2026-11-17.)
 - [x] `.gitignore`: `baselines/*/*.pt`.
 - [x] Split dosyası: `splits/ham10000_lesion_split_v1.csv`, MD5 `a5e29e8b4186db15209b31715fa3a94a`. `validate_manifest.py` bölme bundan saparsa hata veriyor.
 - [x] Takip dışı dosyalar:

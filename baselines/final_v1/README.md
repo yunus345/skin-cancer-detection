@@ -21,7 +21,7 @@ Ağırlıkların MD5'leri: seed 42 `7e264e571ca56ef86524cc95d27b99cf`, seed 2
 
 ## Seçim kuralı (önceden yazıldı)
 
-Kural, seçim betiği çalıştırılmadan önce `PROJECT_STATUS.md`'de (denetim raporu, Adım 2) yazılıydı:
+Kural, seçim betiği çalıştırılmadan önce `PROJECT_STATUS.md`'de (denetim raporu, Adım 2; rapor şimdi `docs/AUDIT_2026-10-26.md`) yazılıydı:
 
 1. Adaylar: A = seed 42 tek model, B = seed 42 + seed 2 ortalaması.
 2. Val macro F1 farkı gürültü cetvelinden (0.013) küçükse, val'de melanom recall ≥ 0.80 sağlayan

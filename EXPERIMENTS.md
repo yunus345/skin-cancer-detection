@@ -1,7 +1,7 @@
 # Deney Geçmişi (v1)
 
 Bu dosya v1 döneminde (4 Ekim - 12 Kasım 2026) denenen her şeyin kaydıdır. Kaynaklar: `baselines/*/`
-altındaki metrik dosyaları, git geçmişi ve 26 Ekim 2026 bağımsız denetim raporu (`PROJECT_STATUS.md`,
+altındaki metrik dosyaları, git geçmişi ve 26 Ekim 2026 bağımsız denetim raporu (`docs/AUDIT_2026-10-26.md`,
 bölüm 5-6). Geliştirme ajanının önceki envanteri (`AGENT_REPORT.md`) bu dosyaya taşındı. Ajanın
 beyanları dosyalarla tek tek karşılaştırıldı; doğrulanamayanlar "kanıt yok" diye işaretli.
 
