@@ -120,7 +120,7 @@ Bunlar bilinçli olarak yapılmadı; yeni fikirler `IDEAS.md`'ye yazılır, o an
 Ölçüm cetveli: `baselines/cv5_baseline/` (5-fold CV, birleşik OOF macro F1 0.785, BA 0.779, melanom recall 0.662).
 Kilitli hedef (2026-11-18): F1 ≥ 0.8048 ve BA ≥ 0.7993, melanom recall ≥ 0.662. Bütçe: baseline dışında en fazla 3 deney.
 
-### [C2] Ek veri: ISIC 2019'un HAM dışı görüntüleri - 2026-11-18 (önceden kayıt, sonuç yok)
+### [C2] Ek veri: ISIC 2019'un HAM dışı görüntüleri - 2026-11-18 (REDDEDİLDİ, fold 0 pilotunda)
 - **Değişen tek şey:** eğitim fold'larına ISIC 2019'un HAM10000 dışındaki görüntüleri eklenir. Doğrulama fold'ları saf HAM
   kalır; tarif, seed (42), epoch sayısı (5 + 25) ve sınıf ağırlığı **kuralı** baseline ile aynı.
 - **Veri kuralları (önceden):**
@@ -141,8 +141,15 @@ Kilitli hedef (2026-11-18): F1 ≥ 0.8048 ve BA ≥ 0.7993, melanom recall ≥ 0
   altına düşmez. Kilitli hedef ayrıca kontrol edilir.
 - **Değerlendirme:** CV OOF (HAM fold'ları). İç ve dış teste bakılmaz.
 - **Kod:** `exp/c2-isic2019` branch'i.
-- Sonuç: (bekleniyor)
-- Karar: (bekleniyor)
+- Sonuç (2026-11-19, Kaggle Version 13, `baselines/c2_isic2019_pilot/`): 14675 görüntü eklendi (HAM kopyası hash ile 3, ek veri
+  içi tekrar 207 çıkarıldı). Fold 0, son epoch: **macro F1 0.766** (baseline 0.776, eşik 0.796), **BA 0.730** (baseline 0.749,
+  eşik 0.769), melanom recall 0.624 (baseline 0.599, eşik 0.599). F1 ve BA eşiği tutmadı; ikisi baseline'ın da altında.
+  Sınıf bazında recall: akiec 0.746 → 0.593, bkl 0.807 → 0.701 en çok düşenler; mel, vasc, df hafif arttı. Epoch başına
+  süre ~4 kat (8 dk). Epoch bazında karışık (F1 30 epoch'un 14'ünde baseline'ın altında), ama son 4 epoch'un hepsinde altında.
+- Yorum (kanıt değil, tek fold): akiec düşüşü önceden yazılan etiket kaymasıyla uyumlu (ISIC 2019'da Bowen SCC içinde, HAM'de
+  akiec içinde). bkl düşüşü alan kaymasıyla uyumlu olabilir. v1'deki kötüleşme de doğru kurulumla tekrarlandı.
+- Karar: **deney bitti, kalan fold'lar koşulmadı** (pilot kuralı). `exp/c2-isic2019` kodu main'e birleştirilmez. Bütçeden 1 deney
+  harcandı (kalan: C3 + bir serbest hak).
 
 ## Deney kayıt şablonu (v2 için)
 

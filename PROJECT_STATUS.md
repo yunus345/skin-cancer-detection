@@ -1,6 +1,6 @@
 # Proje Durumu
 
-Son güncelleme: 2026-11-17. Ayrıntılı plan: [ROADMAP.md](ROADMAP.md). Denetim raporu (2026-10-26, üzerine
+Son güncelleme: 2026-11-19. Ayrıntılı plan: [ROADMAP.md](ROADMAP.md). Denetim raporu (2026-10-26, üzerine
 yazılmaz): [docs/AUDIT_2026-10-26.md](docs/AUDIT_2026-10-26.md). Deney geçmişi: [EXPERIMENTS.md](EXPERIMENTS.md).
 
 ## Nerede kaldık
@@ -68,9 +68,12 @@ A'dan kalanlar (B'yi bekletmez):
 
 - [x] C2 önceden kaydedildi (`EXPERIMENTS.md` [C2]): SCC/UNK çıkarılır, AK → akiec; ID + dHash (Hamming ≤ 12) ile tekrar ayıklama;
   sınıf ağırlığı baseline kuralı; **fold 0 pilotu**: devam için F1 ≥ 0.796, BA ≥ 0.769, melanom recall ≥ 0.599.
-- [ ] C2 fold 0 pilotu: branch `exp/c2-isic2019` (`bafa0c9`), Kaggle Version 13, 2026-11-18'de gönderildi (~3-3.5 saat).
+- [x] **C2 reddedildi (2026-11-19, fold 0 pilotu, Version 13):** F1 0.766 (eşik 0.796, baseline 0.776), BA 0.730 (eşik 0.769,
+  baseline 0.749), melanom recall 0.624. Kalan fold'lar koşulmadı, branch kodu main'e girmedi. Kayıt: `baselines/c2_isic2019_pilot/`.
+  Bütçe: 3 deneyden 1'i harcandı.
 
 ## Sıradaki tek adım
 
-**C2 pilot sonucu:** Version 13 bitince çıktıyı indir (`/kaggle/working/cv_c2/fold0/`), fold 0'ı devam kuralıyla karşılaştır.
-Kural tutarsa fold 1-4, tutmazsa sonuç `EXPERIMENTS.md`'ye yazılır ve C3'e geçilir.
+**C3 tasarımı (kod yok): daha güçlü ön eğitim, tek aday.** DINOv2 ViT-S/B ya da PanDerm-Base arasından T4'e sığan bir aday seçilir;
+ön eğitim verisinde HAM/ISIC görüntüsü olup olmadığı belgelerden araştırılır (doğrulanamazsa C3 atlanır). Pilot ve durma kuralı
+C2'deki gibi önceden `EXPERIMENTS.md`'ye yazılır. Kod `exp/c3-...` branch'inde.

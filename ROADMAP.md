@@ -160,12 +160,13 @@
 
 ## C2. Ek veri, doğru şekilde (ISIC 2019, HAM dışı kısmı)
 **Önceki denemenin sorunları:** Sınıf ağırlıkları melanomu ezdi, etiket eşleştirmesi kaydı, değerlendirme sadece iç testte yapıldı.
-- [ ] Ek veri sadece train fold'larına eklenir, validation fold'ları saf HAM kalır.
-- [ ] Tekrar kontrolü: HAM ile örtüşen görüntüler ID ve hash ile çıkarılır.
+- [x] Ek veri sadece train fold'larına eklenir, validation fold'ları saf HAM kalır (`--extra-train-source`, branch'te).
+- [x] Tekrar kontrolü: HAM ile örtüşen görüntüler ID ve hash ile çıkarılır (dHash, Hamming ≤ 12).
 - [x] Etiket eşleştirmesi önceden yazıldı: SCC ve UNK çıkarılır, AK → akiec.
 - [x] Sınıf ağırlığı önceden seçildi (2026-11-18): **baseline kuralı (ters frekans) korunur**; karekök ve üst sınır reddedildi, gerekçe `EXPERIMENTS.md` [C2].
 - [ ] ~~Alan kayması ölçümü (BCN20000 dış validation)~~: yapılmayacak (kullanıcı kararı: minimum GPU/zaman). Değerlendirme yalnızca HAM OOF.
 - [x] **Başarı kriteri ve pilot kuralı önceden yazıldı** (`EXPERIMENTS.md` [C2]): önce yalnızca fold 0; F1 ve BA'da +0.02 ve melanom recall düşmüyorsa kalan fold'lar, değilse deney biter.
+- [x] **Sonuç (2026-11-19): REDDEDİLDİ.** Fold 0: F1 0.766 (eşik 0.796), BA 0.730 (eşik 0.769), melanom recall 0.624. Kalan fold'lar koşulmadı, kod main'e girmedi. Ayrıntı `EXPERIMENTS.md` [C2], `baselines/c2_isic2019_pilot/`.
 
 ## C3. Daha güçlü ön eğitim (tek aday)
 - [ ] Tek aday seçilir: DINOv2 ViT-S/B veya PanDerm-Base. Model T4'e sığmalı.
