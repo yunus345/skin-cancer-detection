@@ -66,8 +66,11 @@ A'dan kalanlar (B'yi bekletmez):
 - [x] C1 atlandı (kullanıcı kararı, 2026-11-18): yeni dış test seti kurulmayacak; ISIC 2018 dış testi C5'te bir kez,
   "üçüncü bakış" olarak ölçülecek (şartlar ROADMAP C1'de).
 
+- [x] C2 önceden kaydedildi (`EXPERIMENTS.md` [C2]): SCC/UNK çıkarılır, AK → akiec; ID + dHash (Hamming ≤ 12) ile tekrar ayıklama;
+  sınıf ağırlığı baseline kuralı; **fold 0 pilotu**: devam için F1 ≥ 0.796, BA ≥ 0.769, melanom recall ≥ 0.599.
+- [ ] C2 fold 0 pilotu: branch `exp/c2-isic2019` (`bafa0c9`), Kaggle Version 13, 2026-11-18'de gönderildi (~3-3.5 saat).
+
 ## Sıradaki tek adım
 
-**C2 tasarımı (kod yok): ek veri deneyinin kurallarını önceden yazmak.** ISIC 2019'un HAM dışı görüntüleri yalnızca train fold'larına
-eklenecek. Deneyden önce `EXPERIMENTS.md`'ye yazılacaklar: SCC ve UNK'nın ne olacağı, tekrar görüntülerin (hash) ayıklanması, sınıf
-ağırlığı stratejisi (tek strateji), kabul kriteri. Kod `exp/c2-isic2019` branch'inde yazılacak.
+**C2 pilot sonucu:** Version 13 bitince çıktıyı indir (`/kaggle/working/cv_c2/fold0/`), fold 0'ı devam kuralıyla karşılaştır.
+Kural tutarsa fold 1-4, tutmazsa sonuç `EXPERIMENTS.md`'ye yazılır ve C3'e geçilir.
