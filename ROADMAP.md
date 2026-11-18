@@ -148,6 +148,10 @@
 > **C0 sonucu (2026-11-18):** baseline OOF F1 0.785 / BA 0.779 / melR 0.662; hedef F1 ≥ 0.8048, BA ≥ 0.7993 kilitli (`baselines/cv5_baseline/`).
 
 ## C1. Yeni, temiz dış test seti
+> **ATLANDI (2026-11-18, kullanıcı kararı).** Gerekçe: dış teste bakarak karar verilmiyor; yeni set kurmanın maliyeti
+> (lisans, örtüşme kontrolü, eksik sınıflar) kazancından büyük. Şartlar: ISIC 2018 dış testi yalnızca C5'te, v2 tarifi
+> dondurulup commit'lendikten sonra **bir kez** ölçülür ve "üçüncü bakış" diye raporlanır; bu sete bakarak hiçbir şey
+> değiştirilmez; README sınırlamalarına eklenir. Aşağıdaki maddeler uygulanmayacak.
 **Neden:** ISIC 2018 test seti v2 sonunda üçüncü kez kullanılmış olacak.
 - [ ] Aday araştırılır, örneğin Derm7pt (dermoskopi, ~1000 vaka). Erişim ve lisans doğrulanır.
 - [ ] HAM10000 ve ISIC ile örtüşme kontrolü yapılır (ID ve görüntü hash'i).
@@ -176,8 +180,8 @@
 
 ## C5. Tek ölçüm ve karşılaştırma
 - [ ] İç testte bir kez ("geliştirme sırasında görülmüş set" notuyla).
-- [ ] C1'deki yeni dış test setinde bir kez. **Bu, projenin en güvenilir sayısıdır.**
-- [ ] v1 de aynı yeni dış test setinde ölçülür, böylece v1 ile v2 adil şekilde karşılaştırılır.
+- [ ] ~~C1'deki yeni dış test setinde~~ ISIC 2018 dış testinde bir kez ("üçüncü bakış"; C1 atlandı).
+- [x] v1'in aynı setteki sonucu zaten var (F1 0.795 / BA 0.796, ikinci bakış); v2 ile aynı sette karşılaştırılır.
 - [ ] v2, v1'i geçiyorsa arayüzdeki model `config.json` değiştirilerek güncellenir (HF Hub'da `v2` etiketi). Geçmiyorsa v1 kalır ve bu da bir sonuç olarak raporlanır.
 
 ---

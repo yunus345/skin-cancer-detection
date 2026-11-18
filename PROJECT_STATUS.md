@@ -63,7 +63,11 @@ A'dan kalanlar (B'yi bekletmez):
 - [x] `v1` tag'i (`092bcf4`). C2'den itibaren her deney kendi branch'inde (ROADMAP, genel kurallar 8).
 - [x] Arayüz görsel olarak yenilendi (karar kartı, olasılık çubukları, Grad-CAM kaydırıcısı).
 
+- [x] C1 atlandı (kullanıcı kararı, 2026-11-18): yeni dış test seti kurulmayacak; ISIC 2018 dış testi C5'te bir kez,
+  "üçüncü bakış" olarak ölçülecek (şartlar ROADMAP C1'de).
+
 ## Sıradaki tek adım
 
-**C1: temiz dış test seti.** ISIC 2018 test seti v2 sonunda üçüncü kez kullanılmış olacağı için yeni bir set seçilip deneylerden
-önce kenara ayrılır. Önce aday araştırması (Derm7pt akiec içermiyor; alternatif: ISIC 2019'dan HAM dışı bir merkez). GPU gerekmez.
+**C2 tasarımı (kod yok): ek veri deneyinin kurallarını önceden yazmak.** ISIC 2019'un HAM dışı görüntüleri yalnızca train fold'larına
+eklenecek. Deneyden önce `EXPERIMENTS.md`'ye yazılacaklar: SCC ve UNK'nın ne olacağı, tekrar görüntülerin (hash) ayıklanması, sınıf
+ağırlığı stratejisi (tek strateji), kabul kriteri. Kod `exp/c2-isic2019` branch'inde yazılacak.
