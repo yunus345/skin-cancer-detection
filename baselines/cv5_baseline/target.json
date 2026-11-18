@@ -1,0 +1,14 @@
+{
+  "locked_on": "2026-11-18",
+  "rule": "OOF macro F1 ve BA ikisi de baseline + 0.02; melanom recall baseline altina dusmez",
+  "baseline_pooled_oof": {
+    "macro_f1": 0.7848039629494137,
+    "balanced_accuracy": 0.779259284661297,
+    "mel_recall": 0.6620278330019881
+  },
+  "target": {
+    "macro_f1": 0.8048,
+    "balanced_accuracy": 0.7993,
+    "mel_recall_min": 0.662
+  }
+}

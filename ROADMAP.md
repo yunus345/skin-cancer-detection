@@ -139,11 +139,13 @@
 **Neden:** 992 görüntülük val seti 0.01–0.02'lik farkları ayırt edemiyor. CV ile değerlendirme ~9.000 görüntüye dayanır.
 - [x] Train+val birleştirilir. **İç test setine dokunulmaz.**
 - [x] `StratifiedGroupKFold` (grup = `lesion_id`, katman = `label`) ile 5 fold oluşturulur ve `splits/cv5_v1.csv` olarak kaydedilir. (2026-11-17, MD5 `e8e35f94bd974356390d3f2aba045587`)
-- [ ] v1 tarifi 5 fold'da eğitilir (Kaggle'da ~5 saat). Her fold'un OOF (out-of-fold) tahminleri kaydedilir.
-- [ ] Çıktılar:
+- [x] v1 tarifi 5 fold'da eğitilir (Kaggle'da ~5 saat). Her fold'un OOF (out-of-fold) tahminleri kaydedilir.
+- [x] Çıktılar:
   - CV ortalaması ± standart sapma (F1, BA, melanom recall).
   - **Gürültü eşiği** = 2 × fold standart sapması. Bundan sonraki her deney bu eşikle değerlendirilir.
-- [ ] Yan ürün: 5 fold modelinin ortalaması bir ensemble olur ("v1-CV ensemble").
+- [ ] Yan ürün: 5 fold modelinin ortalaması bir ensemble olur ("v1-CV ensemble"). (Ağırlıklar Kaggle çıktısında; ensemble C4'te kurulur.)
+
+> **C0 sonucu (2026-11-18):** baseline OOF F1 0.785 / BA 0.779 / melR 0.662; hedef F1 ≥ 0.8048, BA ≥ 0.7993 kilitli (`baselines/cv5_baseline/`).
 
 ## C1. Yeni, temiz dış test seti
 **Neden:** ISIC 2018 test seti v2 sonunda üçüncü kez kullanılmış olacak.

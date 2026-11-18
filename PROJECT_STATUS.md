@@ -56,11 +56,14 @@ A'dan kalanlar (B'yi bekletmez):
   OOF kimlikleri = fold k, test görüntüsü 0, OOF F1 = son epoch val F1.
 - [x] C0c koşu 1 (Version 11, T4, ~1 saat/fold): fold 0/1/2 OOF macro F1 0.776 / 0.791 / 0.780, BA 0.749 / 0.795 / 0.773,
   melanom recall 0.60 / 0.69 / 0.66. Çıktılar `baselines/cv5_baseline/` (ağırlıklar Kaggle çıktısında, git'te değil).
-- [ ] C0c koşu 2: fold 3, 4 — Version 12, 2026-11-18'de gönderildi (https://www.kaggle.com/code/yunusemreozkan/skin-cancer-train).
-- [x] C0d hazırlığı: `python -m src.evaluation.cv_summary --run-dir baselines/cv5_baseline [--lock-target]`.
+- [x] C0c koşu 2 (Version 12): fold 3/4 OOF macro F1 0.796 / 0.778. Ortam koşu 1 ile aynı.
+- [x] **C0d: hedef kilitlendi (2026-11-18)**, `baselines/cv5_baseline/target.json`. Baseline birleşik OOF (9029): macro F1 0.785,
+  BA 0.779, melanom recall 0.662. **Hedef: F1 ≥ 0.8048 ve BA ≥ 0.7993, melanom recall ≥ 0.662.** Aynı şekilde ölçülür: 5 fold,
+  fold başına tek model, son epoch, argmax (ayrıntı `baselines/cv5_baseline/README.md`). Fold 2×std: F1 0.018, BA 0.038.
 - [x] `v1` tag'i (`092bcf4`). C2'den itibaren her deney kendi branch'inde (ROADMAP, genel kurallar 8).
+- [x] Arayüz görsel olarak yenilendi (karar kartı, olasılık çubukları, Grad-CAM kaydırıcısı).
 
 ## Sıradaki tek adım
 
-**C0d:** koşu 2 bitince fold 3-4 çıktısını `baselines/cv5_baseline/` altına indir (`--file-pattern '\.(json|npz|txt|log)$'`, `cv/fold*`
-klasörlerini bir üst seviyeye taşı), `cv_summary --lock-target` ile 5 fold özetini çıkar ve hedefi **bir kez** kilitle.
+**C1: temiz dış test seti.** ISIC 2018 test seti v2 sonunda üçüncü kez kullanılmış olacağı için yeni bir set seçilip deneylerden
+önce kenara ayrılır. Önce aday araştırması (Derm7pt akiec içermiyor; alternatif: ISIC 2019'dan HAM dışı bir merkez). GPU gerekmez.
