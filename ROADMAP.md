@@ -168,7 +168,11 @@
 - [x] **Başarı kriteri ve pilot kuralı önceden yazıldı** (`EXPERIMENTS.md` [C2]): önce yalnızca fold 0; F1 ve BA'da +0.02 ve melanom recall düşmüyorsa kalan fold'lar, değilse deney biter.
 - [x] **Sonuç (2026-11-19): REDDEDİLDİ.** Fold 0: F1 0.766 (eşik 0.796), BA 0.730 (eşik 0.769), melanom recall 0.624. Kalan fold'lar koşulmadı, kod main'e girmedi. Ayrıntı `EXPERIMENTS.md` [C2], `baselines/c2_isic2019_pilot/`.
 
-## C3. Daha güçlü ön eğitim (tek aday)
+## C3. Daha güçlü ön eğitim (tek aday) - ATLANDI (kullanıcı kararı, 2026-11-19)
+> Belgeler okundu, eğitim yapılmadı. PanDerm: ön eğitimde HAM/ISIC 2018-2019 adıyla yok, ama Avustralya klinik arşivleri
+> (HAM'in Queensland kaynağıyla örtüşme) belgelerden dışlanamıyor; lisans CC-BY-NC-ND (fine-tune edilmiş modeli yayımlamak
+> sorunlu). DINOv2: tıbbi kaynak yok, risk ImageNet-22k ile aynı türde; ama alana özel değil ve T4'te birkaç kat yavaş.
+> Kullanıcı minimum GPU/zaman için adımı atladı. Serbest deney hakkı da kullanılmadı. Ayrıntı `EXPERIMENTS.md` [C3].
 - [ ] Tek aday seçilir: DINOv2 ViT-S/B veya PanDerm-Base. Model T4'e sığmalı.
 - [ ] **Sızıntı kontrolü:** Ön eğitim verisinde HAM/ISIC görüntüsü olup olmadığı belgelerden araştırılır. Doğrulanamazsa bu adım atlanır ve nedeni yazılır.
 - [ ] Aynı CV ile eğitilir.

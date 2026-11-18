@@ -72,8 +72,11 @@ A'dan kalanlar (B'yi bekletmez):
   baseline 0.749), melanom recall 0.624. Kalan fold'lar koşulmadı, branch kodu main'e girmedi. Kayıt: `baselines/c2_isic2019_pilot/`.
   Bütçe: 3 deneyden 1'i harcandı.
 
+- [x] C3 atlandı (kullanıcı kararı, 2026-11-19): PanDerm'de sızıntı doğrulanamıyor ve lisans ND; DINOv2 alana özel değil ve yavaş.
+  Serbest deney hakkı kullanılmadı. **v2 deneyleri bitti, kazanan yok: v1 tarifi kalır.**
+
 ## Sıradaki tek adım
 
-**C3 tasarımı (kod yok): daha güçlü ön eğitim, tek aday.** DINOv2 ViT-S/B ya da PanDerm-Base arasından T4'e sığan bir aday seçilir;
-ön eğitim verisinde HAM/ISIC görüntüsü olup olmadığı belgelerden araştırılır (doğrulanamazsa C3 atlanır). Pilot ve durma kuralı
-C2'deki gibi önceden `EXPERIMENTS.md`'ye yazılır. Kod `exp/c3-...` branch'inde.
+**C4 tasarımı (kod yok): final v2'nin ne olacağına karar.** Tarif v1'le aynı. Açık soru: v2 = final_v1'in kendisi mi, yoksa
+baseline CV'nin 5 fold modelinin ensemble'ı + OOF'ta seçilen T ve melanom eşiği mi (yeni eğitim yok)? Karar test ölçümünden
+önce `baselines/final_v2/README.md`'ye yazılır.

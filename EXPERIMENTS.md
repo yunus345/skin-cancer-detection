@@ -151,6 +151,17 @@ Kilitli hedef (2026-11-18): F1 ≥ 0.8048 ve BA ≥ 0.7993, melanom recall ≥ 0
 - Karar: **deney bitti, kalan fold'lar koşulmadı** (pilot kuralı). `exp/c2-isic2019` kodu main'e birleştirilmez. Bütçeden 1 deney
   harcandı (kalan: C3 + bir serbest hak).
 
+### [C3] Daha güçlü ön eğitim - 2026-11-19 (ATLANDI, eğitim yapılmadı)
+- Adaylar belgelerden incelendi (sızıntı kontrolü, ROADMAP C3):
+  - **PanDerm** (ViT-L/16 ve ViT-B/16, 224 px): 2.1 milyon görüntü, 11 kaynak. Ön eğitimde HAM10000, ISIC 2018/2019, BCN adıyla
+    yok (ISIC'ten yalnızca ISIC 2024). Ama verinin çoğu Avustralya/Yeni Zelanda klinik arşivlerinden; HAM'in Queensland kaynağıyla
+    örtüşme ve test görüntülerine karşı tekrar kontrolü belgelerde yok, yani **doğrulanamıyor**. Lisans CC-BY-NC-ND 4.0.
+  - **DINOv2** (LVD-142M): seçilmiş kaynaklarda tıbbi veri yok; havuz 1.2 milyar web görüntüsü, tekrar temizliği HAM'e karşı değil.
+    Risk mevcut ImageNet-22k ön eğitimiyle aynı türde. Alana özel değil; ViT-B @ ~384 px T4'te ConvNeXt-T'den birkaç kat yavaş.
+- Karar (kullanıcı): **atlandı**, minimum GPU/zaman tercihi. Serbest deney hakkı da kullanılmadı. v2 deneyleri burada bitti:
+  C2 reddedildi, C3 atlandı, yani kazanan yok ve ROADMAP C4'e göre v1 tarifi kalır.
+- Kaynaklar: arXiv 2410.15038 (PanDerm), github.com/SiyuanYan1/PanDerm, arXiv 2304.07193 (DINOv2).
+
 ## Deney kayıt şablonu (v2 için)
 
 ```
