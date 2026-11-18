@@ -345,7 +345,8 @@ def run_phase(model, phase_name, num_epochs, optimizer, scheduler, train_loader,
     return False
 
 
-def build_cv_datasets(manifest_path: str, cv_folds: str, fold: int, image_size: int, augmentation: str):
+def build_cv_datasets(manifest_path: str, cv_folds: str, fold: int, image_size: int, augmentation: str,
+                      extra_train_source: str | None = None):
     """CV fold'u icin (train, val) dataset'leri. Uyelik manifest'in `split` sutunundan degil, kayitli CV
     dosyasindan gelir: fold == k dogrulama (OOF), diger fold'lar egitim. Test satirlari hicbirine girmez."""
     folds = {}
@@ -362,10 +363,24 @@ def build_cv_datasets(manifest_path: str, cv_folds: str, fold: int, image_size: 
     assert not test_ids & set(folds), 'CV dosyasinda test goruntusu var'
     train_dataset.manifest = [row for row in all_rows if row['image_id'] in folds and folds[row['image_id']] != fold]
     val_dataset.manifest = [row for row in all_rows if folds.get(row['image_id']) == fold]
+    n_cv_train = len(train_dataset.manifest)
+    if extra_train_source is not None:
+        # Ek veri (or. ISIC 2019) CV dosyasinda yok; acikca istenmezse sessizce disarida kalirdi. Yalnizca
+        # egitime girer, dogrulama fold'u saf HAM kalir.
+        extra = [row for row in all_rows if row['image_id'] not in folds
+                 and str(row.get('split', '')).lower() == 'train'
+                 and str(row.get('source', '')).startswith(extra_train_source)]
+        assert extra, f'--extra-train-source {extra_train_source}: manifest\'te bu kaynaktan egitim satiri yok'
+        assert not {row['image_id'] for row in extra} & test_ids, 'ek veride test goruntusu var'
+        train_dataset.manifest += extra
+        counts = {}
+        for row in extra:
+            counts[row['label']] = counts.get(row['label'], 0) + 1
+        print(f'Ek egitim verisi ({extra_train_source}): {len(extra)} goruntu {dict(sorted(counts.items()))}')
     # CV dosyasindaki her goruntu manifest'te bulunmali; eksik varsa fold'lar sessizce kuculur.
     expected = sum(1 for k in folds.values() if k == fold)
     assert len(val_dataset) == expected, f'fold {fold}: CV dosyasinda {expected}, manifest\'te {len(val_dataset)} goruntu'
-    assert len(train_dataset) + len(val_dataset) == len(folds), 'CV goruntulerinin bir kismi manifest\'te yok'
+    assert n_cv_train + len(val_dataset) == len(folds), 'CV goruntulerinin bir kismi manifest\'te yok'
     return train_dataset, val_dataset
 
 
@@ -422,6 +437,7 @@ def train_model(
     ema_decay: float = 0.0,
     cv_folds: str | None = None,
     fold: int | None = None,
+    extra_train_source: str | None = None,
 ):
     torch.manual_seed(seed)
     device = select_device(device_arg)
@@ -440,7 +456,8 @@ def train_model(
         train_dataset = SkinCancerDataset(manifest_path, split='train', transform=build_transforms(image_size, train=True, augmentation=augmentation))
         val_dataset = SkinCancerDataset(manifest_path, split='val', transform=build_transforms(image_size))
     else:
-        train_dataset, val_dataset = build_cv_datasets(manifest_path, cv_folds, fold, image_size, augmentation)
+        train_dataset, val_dataset = build_cv_datasets(manifest_path, cv_folds, fold, image_size, augmentation,
+                                                       extra_train_source)
         print(f'CV: {cv_folds} fold {fold} -> train {len(train_dataset)}, val (OOF) {len(val_dataset)} goruntu')
 
     if len(train_dataset) == 0 or len(val_dataset) == 0:
@@ -601,7 +618,11 @@ def main():
                         help='>0 ise agirliklarin EMA kopyasi da tutulur ve her epoch val de olculur (or. 0.999; 0 = kapali)')
     parser.add_argument('--cv-folds', default=None, help='CV bolme dosyasi (or. splits/cv5_v1.csv); verilirse --fold zorunlu')
     parser.add_argument('--fold', type=int, default=None, help='Dogrulama (OOF) fold\'u; digerleri egitim. Son epoch kaydedilir.')
+    parser.add_argument('--extra-train-source', default=None,
+                        help='CV modunda: manifest\'te source sutunu bu onekle baslayan train satirlari her fold\'un egitimine eklenir (or. isic2019)')
     args = parser.parse_args()
+    if args.extra_train_source and args.cv_folds is None:
+        parser.error('--extra-train-source yalnizca --cv-folds ile kullanilir')
     if (args.cv_folds is None) != (args.fold is None):
         parser.error('--cv-folds ve --fold birlikte verilmeli')
 
@@ -632,6 +653,7 @@ def main():
         ema_decay=args.ema_decay,
         cv_folds=args.cv_folds,
         fold=args.fold,
+        extra_train_source=args.extra_train_source,
     )
 
 
