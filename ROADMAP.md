@@ -32,6 +32,10 @@
 8. **Git ve dosya kuralları:**
    - `git add` her zaman dosya adıyla yapılır, `-A` kullanılmaz.
    - `deri-kanseri-cnn-uygulamas.ipynb` dosyasına dokunulmaz.
+   - **Sürüm ve branch düzeni (2026-11-18):** v1'in bittiği commit `v1` tag'i ile işaretli (`092bcf4`; HF modeli de `v1`).
+     Ölçüm altyapısı (C0) main'de. C2'den itibaren her deney kendi branch'inde (`exp/c2-isic2019` gibi); Kaggle o branch'i
+     klonlar (`git clone -b <branch>`). Kabul edilen deneyin kodu main'e birleşir; reddedilenin kodu birleşmez ama sonucu
+     ve kaydı (`EXPERIMENTS.md`, sonuç dosyaları) her durumda main'e girer.
    - `.pt` dosyaları git'e girmez. Ağırlıklar en az iki yerde ve MD5'leriyle tutulur.
 9. **Belge disiplini:**
    - `PROJECT_STATUS.md` kısa tutulur ve **tek bir** sonraki adımı gösterir.
@@ -70,7 +74,7 @@
 - [x] İç test ve dış test (ikinci bakış), tek ölçüm. Sonuçlar `baselines/final_v1/README.md`'de (commit `1730eb4`).
 
 ## A4. Tekrarlanabilirlik
-- [ ] `requirements.txt` versiyonları Kaggle koşusunun `pip freeze` çıktısından sabitlenir.
+- [x] `requirements.txt` sabitlendi (2026-11-18): Mac (değerlendirme) sürümleri; Kaggle eğitim ortamı `baselines/cv5_baseline/pip_freeze.txt`'de ve dosyada yorum olarak.
 - [x] Final eğitim ve değerlendirme komutları tek blok halinde README'ye yazılır.
 - [x] Temiz bir klonda değerlendirme komutunun çalıştığı doğrulanır. (2026-11-17: iç test birebir yeniden üretildi; dış test görüntü gerektirdiği için klonda çalıştırılmadı.)
 

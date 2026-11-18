@@ -1,0 +1,45 @@
+{
+  "run_dir": "baselines/cv5_baseline",
+  "folds_present": [
+    0,
+    1,
+    2
+  ],
+  "folds_missing": [
+    3,
+    4
+  ],
+  "per_fold": {
+    "0": {
+      "macro_f1": 0.7759565355065726,
+      "balanced_accuracy": 0.7488505219323747,
+      "mel_recall": 0.599009900990099
+    },
+    "1": {
+      "macro_f1": 0.7913281785528266,
+      "balanced_accuracy": 0.7951599224595489,
+      "mel_recall": 0.6915422885572139
+    },
+    "2": {
+      "macro_f1": 0.779459287029644,
+      "balanced_accuracy": 0.7734137177200129,
+      "mel_recall": 0.6616915422885572
+    }
+  },
+  "mean": {
+    "macro_f1": 0.7822480003630142,
+    "balanced_accuracy": 0.7724747207039787,
+    "mel_recall": 0.6507479106119567
+  },
+  "std": {
+    "macro_f1": 0.008056335645139806,
+    "balanced_accuracy": 0.023168975610580032,
+    "mel_recall": 0.04722693080142421
+  },
+  "pooled_oof": {
+    "macro_f1": 0.7841659265980734,
+    "balanced_accuracy": 0.7725281289464085,
+    "mel_recall": 0.6506622516556292
+  },
+  "n_images": 5417
+}
