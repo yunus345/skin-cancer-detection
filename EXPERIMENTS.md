@@ -115,6 +115,35 @@ CutMix, melanom sınıf ağırlığını artırmak, logit adjustment, karekök s
 kademeli unfreezing, V2-S ve Swin'i yeni tarifle eğitip ensemble_v2 kurmak, EfficientNetV2-M @480.
 Bunlar bilinçli olarak yapılmadı; yeni fikirler `IDEAS.md`'ye yazılır, o an uygulanmaz.
 
+# v2 deneyleri
+
+Ölçüm cetveli: `baselines/cv5_baseline/` (5-fold CV, birleşik OOF macro F1 0.785, BA 0.779, melanom recall 0.662).
+Kilitli hedef (2026-11-18): F1 ≥ 0.8048 ve BA ≥ 0.7993, melanom recall ≥ 0.662. Bütçe: baseline dışında en fazla 3 deney.
+
+### [C2] Ek veri: ISIC 2019'un HAM dışı görüntüleri - 2026-11-18 (önceden kayıt, sonuç yok)
+- **Değişen tek şey:** eğitim fold'larına ISIC 2019'un HAM10000 dışındaki görüntüleri eklenir. Doğrulama fold'ları saf HAM
+  kalır; tarif, seed (42), epoch sayısı (5 + 25) ve sınıf ağırlığı **kuralı** baseline ile aynı.
+- **Veri kuralları (önceden):**
+  - SCC ve UNK çıkarılır. AK → akiec (HAM'in akiec'i AK + Bowen; ISIC 2019'da Bowen SCC içinde: anlam kısmen kayar, bilinçli kabul).
+  - HAM10000 görüntüleri ID ile, aynı görüntünün farklı ID'li kopyaları görüntü hash'i ile çıkarılır. ISIC 2018 dış testiyle örtüşme
+    varsa betik durur.
+  - Ek görüntüler yalnızca eğitime girer; kod eklenen sayıyı yazdırır ve 0 ise durur.
+- **Sınıf ağırlığı:** ters frekans (baseline kuralı), eğitim setinin gerçek sayılarıyla yeniden hesaplanır. Böylece her sınıfın kayıptaki
+  toplam payı baseline'daki gibi eşit kalır. ROADMAP'teki "karekök / üst sınırlı" seçenekleri reddedildi: karekök nv'nin payını ~%33'e
+  çıkarıp df ve vasc'ı ~%5'e düşürür (nadir sınıflar ve BA zarar görür); üst sınır yeni bir ayar düğmesi getirir.
+- **Hipotez:** zayıf sınıflara (mel, bcc, akiec) gelen ek örnekler OOF F1 ve BA'yı artırır. Risk: alan kayması (farklı hastane, cihaz,
+  siyah kenarlar, kare görüntüler); v1'deki denemede (`baselines/_archive/convnext_tiny_isic2019_v1/`) sonuç kötüleşmişti.
+- **Pilot ve durma kuralı (kullanıcıyla kararlaştırıldı, sonuçtan önce):** önce yalnızca fold 0 eğitilir (~3 saat GPU). Devam için üçü
+  birden gerekir, baseline fold 0'a göre: macro F1 ≥ 0.796 (+0.02), BA ≥ 0.769 (+0.02), melanom recall ≥ 0.599. Biri tutmazsa deney
+  burada biter ("pilotta kayda değer kazanç yok") ve C3'e geçilir. Bilinen bedel: gerçek etkisi ~+0.01 olan bir değişiklik elenebilir;
+  böyle bir etki hedefi zaten tutturmaz.
+- **Başarı kriteri (tam CV koşulursa):** 5 fold'un en az 4'ünde baseline'dan iyi ve ortalama F1 farkı > 0.01; melanom recall baseline
+  altına düşmez. Kilitli hedef ayrıca kontrol edilir.
+- **Değerlendirme:** CV OOF (HAM fold'ları). İç ve dış teste bakılmaz.
+- **Kod:** `exp/c2-isic2019` branch'i.
+- Sonuç: (bekleniyor)
+- Karar: (bekleniyor)
+
 ## Deney kayıt şablonu (v2 için)
 
 ```

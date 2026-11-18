@@ -162,10 +162,10 @@
 **Önceki denemenin sorunları:** Sınıf ağırlıkları melanomu ezdi, etiket eşleştirmesi kaydı, değerlendirme sadece iç testte yapıldı.
 - [ ] Ek veri sadece train fold'larına eklenir, validation fold'ları saf HAM kalır.
 - [ ] Tekrar kontrolü: HAM ile örtüşen görüntüler ID ve hash ile çıkarılır.
-- [ ] Etiket eşleştirmesi: SCC ve UNK gibi HAM'de olmayan sınıfların nasıl ele alınacağı önceden yazılır (çıkar veya eşleştir).
-- [ ] Sınıf ağırlığı stratejisi önceden seçilir: karekök ağırlık veya üst sınırlı ağırlık. **Tek strateji denenir.**
-- [ ] Alan kayması ölçümü: BCN20000'in küçük bir kısmı eğitime alınmayıp "dış validation" olarak ayrılır.
-- [ ] **Başarı kriteri (önceden):** CV F1 v1-CV'den gürültü eşiği kadar kötü değil **ve** dış validation'da gürültü eşiğinden büyük iyileşme var.
+- [x] Etiket eşleştirmesi önceden yazıldı: SCC ve UNK çıkarılır, AK → akiec.
+- [x] Sınıf ağırlığı önceden seçildi (2026-11-18): **baseline kuralı (ters frekans) korunur**; karekök ve üst sınır reddedildi, gerekçe `EXPERIMENTS.md` [C2].
+- [ ] ~~Alan kayması ölçümü (BCN20000 dış validation)~~: yapılmayacak (kullanıcı kararı: minimum GPU/zaman). Değerlendirme yalnızca HAM OOF.
+- [x] **Başarı kriteri ve pilot kuralı önceden yazıldı** (`EXPERIMENTS.md` [C2]): önce yalnızca fold 0; F1 ve BA'da +0.02 ve melanom recall düşmüyorsa kalan fold'lar, değilse deney biter.
 
 ## C3. Daha güçlü ön eğitim (tek aday)
 - [ ] Tek aday seçilir: DINOv2 ViT-S/B veya PanDerm-Base. Model T4'e sığmalı.
