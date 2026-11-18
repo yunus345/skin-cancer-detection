@@ -54,12 +54,13 @@ A'dan kalanlar (B'yi bekletmez):
 - [x] C0b: `train.py --cv-folds splits/cv5_v1.csv --fold k`. CV modunda `best_model.pt` yazılmaz; `last_model.pt` (son epoch) ve
   `oof_fold{k}.npz` (fold k'nin fp32 logit'leri) yazılır; test tahmin edilmez. Mac'te küçük denemede (5×40 görüntü, 1+1 epoch)
   OOF kimlikleri = fold k, test görüntüsü 0, OOF F1 = son epoch val F1.
-- [ ] C0c: Kaggle koşu 1 (fold 0, 1, 2) başladı 2026-11-17 17:04, Version 11 (https://www.kaggle.com/code/yunusemreozkan/skin-cancer-train).
-  Notebook artık test setini ölçmüyor; `pip freeze` alıyor. Koşu 2: fold 3, 4 (`FOLDS = [3, 4]`).
-- [x] C0d hazırlığı: `python -m src.evaluation.cv_summary --run-dir baselines/cv5_baseline [--lock-target]` (sahte veriyle test edildi;
-  hedef yalnızca 5 fold tamamken ve bir kez kilitlenir).
+- [x] C0c koşu 1 (Version 11, T4, ~1 saat/fold): fold 0/1/2 OOF macro F1 0.776 / 0.791 / 0.780, BA 0.749 / 0.795 / 0.773,
+  melanom recall 0.60 / 0.69 / 0.66. Çıktılar `baselines/cv5_baseline/` (ağırlıklar Kaggle çıktısında, git'te değil).
+- [ ] C0c koşu 2: fold 3, 4 — Version 12, 2026-11-18'de gönderildi (https://www.kaggle.com/code/yunusemreozkan/skin-cancer-train).
+- [x] C0d hazırlığı: `python -m src.evaluation.cv_summary --run-dir baselines/cv5_baseline [--lock-target]`.
+- [x] `v1` tag'i (`092bcf4`). C2'den itibaren her deney kendi branch'inde (ROADMAP, genel kurallar 8).
 
 ## Sıradaki tek adım
 
-**C0c devam:** koşu 1 bitince çıktıyı `baselines/cv5_baseline/` altına indir (önce küçük dosyalar), fold 0-2 özetine bak, sonra koşu 2'yi
-(`FOLDS = [3, 4]`) gönder.
+**C0d:** koşu 2 bitince fold 3-4 çıktısını `baselines/cv5_baseline/` altına indir (`--file-pattern '\.(json|npz|txt|log)$'`, `cv/fold*`
+klasörlerini bir üst seviyeye taşı), `cv_summary --lock-target` ile 5 fold özetini çıkar ve hedefi **bir kez** kilitle.
