@@ -143,7 +143,7 @@
 - [x] Çıktılar:
   - CV ortalaması ± standart sapma (F1, BA, melanom recall).
   - **Gürültü eşiği** = 2 × fold standart sapması. Bundan sonraki her deney bu eşikle değerlendirilir.
-- [ ] Yan ürün: 5 fold modelinin ortalaması bir ensemble olur ("v1-CV ensemble"). (Ağırlıklar Kaggle çıktısında; ensemble C4'te kurulur.)
+- [x] Yan ürün: 5 fold modelinin ortalaması bir ensemble olur ("v1-CV ensemble"). (C4'te kuruldu ve final_v2 oldu; testte v1'i geçmedi.)
 
 > **C0 sonucu (2026-11-18):** baseline OOF F1 0.785 / BA 0.779 / melR 0.662; hedef F1 ≥ 0.8048, BA ≥ 0.7993 kilitli (`baselines/cv5_baseline/`).
 
@@ -179,15 +179,15 @@
 - [ ] **Başarı kriteri (önceden):** CV F1, v1-CV'yi gürültü eşiğinden büyük farkla geçmeli.
 
 ## C4. Final v2 tarifi (sadece CV/OOF verisiyle)
-- [ ] C2 ve C3'ten kazananlar birleştirilir. Kazanan yoksa v1 tarifi kalır.
-- [ ] Fold ensemble, T kalibrasyonu ve melanom tarama eşiği OOF tahminleri üzerinde belirlenir.
-- [ ] `baselines/final_v2/README.md` yazılır ve **test ölçümünden önce** commit edilir.
+- [x] C2 ve C3'ten kazananlar birleştirilir. Kazanan yoksa v1 tarifi kalır. (Kazanan yok: tarif v1; v2 = baseline CV'nin 5 fold modeli.)
+- [x] Fold ensemble, T kalibrasyonu ve melanom tarama eşiği OOF tahminleri üzerinde belirlenir (Mac'te yeniden hesaplanan OOF; t = 0.07, τ = 0.90).
+- [x] `baselines/final_v2/README.md` yazılır ve **test ölçümünden önce** commit edilir (`2e800d9` kurallar, `d0c13f2` tarif).
 
 ## C5. Tek ölçüm ve karşılaştırma
-- [ ] İç testte bir kez ("geliştirme sırasında görülmüş set" notuyla).
-- [ ] ~~C1'deki yeni dış test setinde~~ ISIC 2018 dış testinde bir kez ("üçüncü bakış"; C1 atlandı).
+- [x] İç testte bir kez ("geliştirme sırasında görülmüş set" notuyla): F1 0.826, BA 0.817 (v1 0.829 / 0.832).
+- [x] ~~C1'deki yeni dış test setinde~~ ISIC 2018 dış testinde bir kez ("üçüncü bakış"; C1 atlandı): F1 0.813, BA 0.794 (v1 0.795 / 0.796).
 - [x] v1'in aynı setteki sonucu zaten var (F1 0.795 / BA 0.796, ikinci bakış); v2 ile aynı sette karşılaştırılır.
-- [ ] v2, v1'i geçiyorsa arayüzdeki model `config.json` değiştirilerek güncellenir (HF Hub'da `v2` etiketi). Geçmiyorsa v1 kalır ve bu da bir sonuç olarak raporlanır.
+- [x] v2, v1'i geçiyorsa arayüzdeki model `config.json` değiştirilerek güncellenir (HF Hub'da `v2` etiketi). Geçmiyorsa v1 kalır ve bu da bir sonuç olarak raporlanır. **Sonuç (2026-11-19): v1 kalır** (önceden yazılan kuralın 4 koşulundan 1'i tuttu; farklar güven aralığı içinde). `baselines/final_v2/README.md`.
 
 ---
 

@@ -162,6 +162,14 @@ Kilitli hedef (2026-11-18): F1 ≥ 0.8048 ve BA ≥ 0.7993, melanom recall ≥ 0
   C2 reddedildi, C3 atlandı, yani kazanan yok ve ROADMAP C4'e göre v1 tarifi kalır.
 - Kaynaklar: arXiv 2410.15038 (PanDerm), github.com/SiyuanYan1/PanDerm, arXiv 2304.07193 (DINOv2).
 
+### [C4/C5] final_v2: baseline CV'nin 5 fold ensemble'ı - 2026-11-19 (v1 KALDI)
+- Yeni eğitim yok. Kurallar ve v1 yerine geçme kuralı testten önce: `baselines/final_v2/README.md` (`2e800d9`), tarif
+  `recipe.json` (`d0c13f2`). OOF Mac'te yeniden hesaplandı (tek sayı kaynağı).
+- Seçim (OOF, 9029): T 0.93-0.96, tarama eşiği 0.07, τ 0.90.
+- Test (bir kez): iç F1 0.826 / BA 0.817 (v1 0.829 / 0.832); dış (üçüncü bakış) F1 0.813 / BA 0.794 (v1 0.795 / 0.796).
+  Tarama modunda melanom recall iç 0.841 / dış 0.871, precision ~0.44.
+- Karar: kuralın 4 koşulundan 1'i tuttu, **v1 kalır**. Farklar güven aralığı içinde; v2 ile v1 ayırt edilemiyor.
+
 ## Deney kayıt şablonu (v2 için)
 
 ```

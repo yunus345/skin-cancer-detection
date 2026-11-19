@@ -1,0 +1,23 @@
+{
+  "ic_test_macro_f1": {
+    "v2": 0.826,
+    "v1": 0.829,
+    "v2_dusuk_degil": false
+  },
+  "ic_test_balanced_accuracy": {
+    "v2": 0.817,
+    "v1": 0.832,
+    "v2_dusuk_degil": false
+  },
+  "dis_test_macro_f1": {
+    "v2": 0.813,
+    "v1": 0.795,
+    "v2_dusuk_degil": true
+  },
+  "dis_test_balanced_accuracy": {
+    "v2": 0.794,
+    "v1": 0.796,
+    "v2_dusuk_degil": false
+  },
+  "karar": "v1 kalir"
+}

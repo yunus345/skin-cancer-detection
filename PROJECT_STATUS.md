@@ -75,8 +75,13 @@ A'dan kalanlar (B'yi bekletmez):
 - [x] C3 atlandı (kullanıcı kararı, 2026-11-19): PanDerm'de sızıntı doğrulanamıyor ve lisans ND; DINOv2 alana özel değil ve yavaş.
   Serbest deney hakkı kullanılmadı. **v2 deneyleri bitti, kazanan yok: v1 tarifi kalır.**
 
+- [x] **C4/C5 (2026-11-19): final_v2 = baseline CV'nin 5 fold ensemble'ı** (yeni eğitim yok, eşikler 9029 OOF'ta).
+  Tek ölçüm: iç F1 0.826 / BA 0.817, dış F1 0.813 / BA 0.794. Önceden yazılan kural (dördü de v1'den düşük olmamalı)
+  tutmadı: **v1 kalır, arayüz değişmez.** `baselines/final_v2/README.md`. Fold ağırlıkları `models/cv5_baseline/` (git'te değil).
+
+**Aşama C (v2) bitti.**
+
 ## Sıradaki tek adım
 
-**C4 tasarımı (kod yok): final v2'nin ne olacağına karar.** Tarif v1'le aynı. Açık soru: v2 = final_v1'in kendisi mi, yoksa
-baseline CV'nin 5 fold modelinin ensemble'ı + OOF'ta seçilen T ve melanom eşiği mi (yeni eğitim yok)? Karar test ölçümünden
-önce `baselines/final_v2/README.md`'ye yazılır.
+**Kalıcı ücretsiz demo araştırması (sunumdan önce, kullanıcı kararıyla).** Seçenekler araştırılır, para ödenmez. Hiçbiri
+olmazsa sunum günü `SHARE=1 .venv/bin/python app.py`. Aşama D (sohbet paneli, RAG) isteğe bağlı.

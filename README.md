@@ -69,6 +69,15 @@ Tek ölçüm, 2026-11-12. Parantez içi %95 bootstrap güven aralığı.
 - Ölçüm gürültüsü: aynı tarifle sadece seed değişince val F1 yaklaşık 0.013 oynuyor. Bundan küçük
   farklar fark sayılmamalı.
 
+### v2 denemesi (2026-11): v1 kaldı
+
+v2'de önce 5-fold CV ile ölçüm cetveli kuruldu (fold dışı tahminlerde F1 0.785, BA 0.779). Ek veri deneyi (ISIC 2019'un
+HAM dışı 14.675 görüntüsü) ilk fold'da kazanç göstermedi ve durduruldu; alana özel ön eğitim (PanDerm) sızıntı riski
+doğrulanamadığı için denenmedi. Son olarak CV'nin 5 fold modeli, eşikleri 9029 fold dışı görüntüde seçilerek bir
+ensemble'a çevrildi ve bir kez ölçüldü: iç test F1 0.826 / BA 0.817, dış test F1 0.813 / BA 0.794. Önceden yazılan
+kurala göre (dört sayının hiçbiri v1'den düşük olmamalı) **v1 kaldı**; farklar güven aralıklarının içinde.
+Ayrıntı: [baselines/final_v2/README.md](baselines/final_v2/README.md).
+
 Deney geçmişi (B0 224 px ile F1 0.70'ten bu modele nasıl gelindi): [EXPERIMENTS.md](EXPERIMENTS.md).
 
 ## Sınırlamalar
@@ -85,7 +94,8 @@ balanced accuracy'si iç testte 0.809 iken dış testte 0.765'e düştü.
 ISIC 2018 resmi test seti, final modelden önce eski bir ensemble modeli
 değerlendirmek için bir kez kullanıldı. Bu nedenle final modelin dış test sonucu,
 hiç kullanılmamış bir sette yapılan ilk ölçüm değil. Yine de final model bu sete
-bakılarak seçilmedi, dolayısıyla projedeki en güvenilir sonuç budur.
+bakılarak seçilmedi, dolayısıyla projedeki en güvenilir sonuç budur. v2 karşılaştırması bu seti
+üçüncü kez kullandı (2026-11-19); v2 için de bu sete bakılarak hiçbir şey değiştirilmedi.
 
 **3. Değişikliklerin etkisi ayrı ayrı ölçülmedi (ablation yok).**
 En büyük performans artışı üç değişikliğin birlikte uygulanmasıyla elde edildi:

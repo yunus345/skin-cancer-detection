@@ -1,0 +1,37 @@
+{
+  "fold0": {
+    "macro_f1": 0.7764392805767439,
+    "balanced_accuracy": 0.7643414430281028,
+    "macro_precision": 0.7916487866077109,
+    "mel_recall": 0.6608187134502924,
+    "mel_precision": 0.6608187134502924
+  },
+  "fold1": {
+    "macro_f1": 0.80467593095387,
+    "balanced_accuracy": 0.7896554762931999,
+    "macro_precision": 0.8237877216682442,
+    "mel_recall": 0.7251461988304093,
+    "mel_precision": 0.6595744680851063
+  },
+  "fold2": {
+    "macro_f1": 0.7856449147089096,
+    "balanced_accuracy": 0.7602481716146018,
+    "macro_precision": 0.8198998932245658,
+    "mel_recall": 0.7251461988304093,
+    "mel_precision": 0.6702702702702703
+  },
+  "fold3": {
+    "macro_f1": 0.8171341980433142,
+    "balanced_accuracy": 0.7938406840604287,
+    "macro_precision": 0.8441914227048665,
+    "mel_recall": 0.7426900584795322,
+    "mel_precision": 0.6902173913043478
+  },
+  "fold4": {
+    "macro_f1": 0.790182800559476,
+    "balanced_accuracy": 0.7774224415446509,
+    "macro_precision": 0.8048213759340198,
+    "mel_recall": 0.6842105263157895,
+    "mel_precision": 0.6842105263157895
+  }
+}
