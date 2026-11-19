@@ -1,29 +1,44 @@
-# Yol Haritası: v1 Kapanış → Arayüz → v2
+# Yol Haritası: v1 Kapanış → v2 → Web Uygulaması → Rapor
 
 > Bu dosya ana geliştirme ajanı için genel plandır. Adımlar **sırayla** yapılır. Bir aşama bitmeden sonrakine geçilmez ve her aşamanın sonunda kullanıcıdan onay alınır.
 > Referans: `docs/AUDIT_2026-10-26.md` (bağımsız denetim raporu).
+>
+> **Sürüm 2 (2026-11-19) değişiklikleri:**
+> - Aşama sırası değişti: A → C → **W (Web uygulaması)** → **R (Rapor, en son iş)**.
+> - Eski Aşama B (Gradio) ve D (sohbet + RAG) birleştirildi: **Aşama W**, kendi web sitesi (FastAPI backend + web frontend) ve içinde asistan sohbeti.
+> - C3 atlandı (gerekçe aşağıda). C4'te seçenek B (fold ensemble) seçildi.
+
+---
+
+## Durum özeti
+
+| Aşama | Durum |
+|---|---|
+| A: v1 kapanış | Büyük ölçüde bitti. Kalanlar A-kalan listesinde. |
+| C0: 5-fold CV | Bitti |
+| C1: Temiz dış test seti | **Atlandı** (2026-11-18); ISIC 2018 üçüncü kullanım |
+| C2: Ek veri | ❌ Reddedildi (fold 0 pilotu, 2026-11-19) |
+| C3: Daha güçlü ön eğitim | **Atlandı** |
+| C4: Final v2 kararı | ✅ Bitti (seçenek B: 5 fold ensemble) |
+| C5: Tek ölçüm ve karşılaştırma | ✅ Bitti: **v1 kalıyor** (commit c9eee16) |
+| W: Web uygulaması | **Sıradaki** (önce A-kalan kontrolü, sonra W0 tasarım) |
+| R: Rapor | Bekliyor (**en son iş**) |
 
 ---
 
 ## Bağlam (kısa)
 
 - **Proje:** HAM10000 ile 7 sınıflı cilt lezyonu sınıflandırma, PyTorch, transfer learning. Öğrenme amaçlı (bkz. `CLAUDE.md`).
-- **En iyi model:** ConvNeXt-Tiny, ImageNet-22k ön eğitimli, 384 px, tarif v2.
-  - Seed 42: iç test F1 0.818, BA 0.809.
-  - Seed 2: iç test F1 0.821, BA 0.830.
-- **final_v1 (2026-11-12, dondurulmuş, tek ölçüm):** iki seed'in kalibre ortalaması, tarama eşiği 0.28.
-  - İç test: F1 0.829, BA 0.832. İç test yaklaşık 3.5 puan iyimser.
-  - Dış test (ISIC 2018, ikinci bakış): F1 0.795, BA 0.796. Genelleme için raporlanacak sayı bu.
-  - Ayrıntı: `baselines/final_v1/README.md`.
-- **Gürültü seviyesi:** Sadece seed değişince val F1 ~0.013, val melanom recall ~0.11 oynuyor. Test BA'nın %95 güven aralığı ~9 puan genişliğinde.
-- **Denetimin ana bulgusu:** Modelleme fiilen bitti, eksik olan kapanış ve paketleme. Savrulmanın sebebi "bitti" tanımının ve durma kuralının olmamasıydı.
+- **final_v1:** ConvNeXt-Tiny, ImageNet-22k ön eğitimli, 384 px, tarif v2. Sayılar `baselines/final_v1/` içinde.
+- **Gürültü:** Seed değişince val F1 ~0.013, val melanom recall ~0.11 oynuyor. C0'da hesaplanan gürültü eşiği bundan sonraki bütün karşılaştırmalarda kullanılır.
+- **Denetimin ana bulgusu:** Savrulmanın sebebi "bitti" tanımının ve durma kuralının olmamasıydı.
 
 ---
 
 ## Genel kurallar (bütün aşamalarda geçerli)
 
 1. **Öğrenme modu:** `CLAUDE.md` geçerli. Her adımdan önce ne yapılacağını ve nedenini kısaca açıkla. Kavramsal kararlarda önce kullanıcıya sor.
-2. **Kararlar sadece validation'da (veya CV'de) verilir.** İç test ve dış test sadece aşama sonunda, bir kez kullanılır.
+2. **Kararlar sadece validation'da (veya CV/OOF'ta) verilir.** İç test ve dış test sadece aşama sonunda, bir kez kullanılır.
 3. **Tek değişiklik kuralı:** Her deneyde sadece bir şey değişir.
 4. **Başarı kriteri önceden yazılır.** Deney başlamadan önce kriter `EXPERIMENTS.md`'ye yazılır. Sonuç ne çıkarsa çıksın kaydedilir.
 5. **Gürültüden küçük fark, fark değildir.** Eşit durumda daha basit ve ucuz seçenek seçilir.
@@ -32,185 +47,171 @@
 8. **Git ve dosya kuralları:**
    - `git add` her zaman dosya adıyla yapılır, `-A` kullanılmaz.
    - `deri-kanseri-cnn-uygulamas.ipynb` dosyasına dokunulmaz.
-   - **Sürüm ve branch düzeni (2026-11-18):** v1'in bittiği commit `v1` tag'i ile işaretli (`092bcf4`; HF modeli de `v1`).
-     Ölçüm altyapısı (C0) main'de. C2'den itibaren her deney kendi branch'inde (`exp/c2-isic2019` gibi); Kaggle o branch'i
-     klonlar (`git clone -b <branch>`). Kabul edilen deneyin kodu main'e birleşir; reddedilenin kodu birleşmez ama sonucu
-     ve kaydı (`EXPERIMENTS.md`, sonuç dosyaları) her durumda main'e girer.
    - `.pt` dosyaları git'e girmez. Ağırlıklar en az iki yerde ve MD5'leriyle tutulur.
-9. **Belge disiplini:**
-   - `PROJECT_STATUS.md` kısa tutulur ve **tek bir** sonraki adımı gösterir.
-   - Denetim raporu `docs/AUDIT_2026-10-26.md` dosyasında kalır ve üzerine yazılmaz.
+   - Repo herkese açıksa tasarım referans görüntüleri (başkalarının tasarımları) commit edilmez: `docs/design/refs/` `.gitignore`'da olur.
+9. **Git akışı:**
+   - Kapanış ve belge işleri doğrudan `main`'de.
+   - Her deney ayrı branch'te (`exp/...`). Başarısız deneyin kodu birleştirilmez, ama sonucu `EXPERIMENTS.md`'de `main`'e yazılır.
+   - Web uygulaması `feature/web` branch'inde geliştirilir, çalışınca `main`'e birleştirilir.
+   - Her aşama sonunda etiket: `v1.0`, `v2.0`, `web-v1`.
+   - Kaggle'da eğitim yapılırken notebook'un doğru branch'i çektiği kontrol edilir.
+10. **Belge disiplini:**
+    - `PROJECT_STATUS.md` kısa tutulur ve **tek bir** sonraki adımı gösterir.
+    - Denetim raporu `docs/AUDIT_2026-10-26.md` dosyasında kalır ve üzerine yazılmaz.
 
 ---
 
-# AŞAMA A: v1 Kapanış
+# AŞAMA A: v1 Kapanış (büyük ölçüde bitti)
 
-> Yeni eğitim yok, GPU gerekmiyor. Hedef süre: 2–3 oturum.
+Ayrıntılı adımlar ROADMAP sürüm 1'deydi (A0–A5). final_v1 dondurulmuş ve ölçülmüş durumda.
 
-## A0. Kararlar (kullanıcı onaylar)
-- [x] Hedef: "İç testte F1 ≥ 0.80 ve BA ≥ 0.80, dış test dürüstçe raporlanır". BA ≥ 0.85 hedefi bırakılır.
-- [x] Ana metrik: macro F1. BA, macro precision ve melanom recall'u da raporlanır.
-- [x] Train+val ile yeniden eğitim planı iptal edilir.
-- [ ] Dersin teslim beklentisi (format, tarih, demo) öğrenilir ve buraya not edilir.
-- [x] Kontrol: tarif v2 iki aşamalı mı (donuk backbone + fine-tune), yoksa warmup ile tek aşamalı mı? Gerçekte ne uygulandığı koddan doğrulanıp README'ye yazılır. (Doğrulandı: iki fazlı, 5 epoch donuk + 25 epoch warmup/cosine; README "Yöntem".)
-
-## A1. Güvenlik ve repo düzeni
-- [x] Ağırlıklar Drive `archive/`'e kopyalandı, MD5'ler eşleşti ve `baselines/final_v1/README.md`'de. (2026-11-12)
-- [x] Ağırlıkların üçüncü kopyası: Hugging Face Hub `emreozkn/skin-lesion-convnext-v1` (`v1`), 2026-11-17.
-- [x] Denetim raporunu `docs/AUDIT_2026-10-26.md` dosyasına taşı. `PROJECT_STATUS.md`'yi kısa formata çevir. (Yapıldı 2026-11-17.)
-- [x] `.gitignore`: `baselines/*/*.pt`.
-- [x] Split dosyası: `splits/ham10000_lesion_split_v1.csv`, MD5 `a5e29e8b4186db15209b31715fa3a94a`. `validate_manifest.py` bölme bundan saparsa hata veriyor.
-- [x] Takip dışı dosyalar:
-  - Small ve seed 2'nin `test_metrics.json` dosyaları "karar sonrası görüldü" notuyla commit edilir.
-  - `AGENT_REPORT.md`'nin içeriği düzeltilerek `EXPERIMENTS.md`'ye taşınır.
-- [x] Klasör düzeni: `baselines/final_v1/` + iki üye üstte, 10 eski deney `baselines/_archive/`'de (2026-11-17). Kod yolları güncellendi; `ensemble_val` (calibrate, candidate, tta), `metadata_fusion`, `ensemble_test`, `freeze_recipe` çıktıları taşıma öncesiyle birebir aynı.
-
-## A2. Final modeli dondur (sadece val) ✅
-- [x] Adaylar A (seed 42) ve B (iki seed ortalaması); seçim kuralı önceden yazıldı; B seçildi, tarama eşiği 0.28.
-- [x] `baselines/final_v1/README.md` ve `recipe.json` test ölçümünden önce commit'lendi (`bb0cf19`).
-
-## A3. Tek ölçüm ✅
-- [x] AUC eklendi, scriptler `--recipe` okuyor, ensemble_v1 regresyon kontrolü geçti.
-- [x] İç test ve dış test (ikinci bakış), tek ölçüm. Sonuçlar `baselines/final_v1/README.md`'de (commit `1730eb4`).
-
-## A4. Tekrarlanabilirlik
-- [x] `requirements.txt` sabitlendi (2026-11-18): Mac (değerlendirme) sürümleri; Kaggle eğitim ortamı `baselines/cv5_baseline/pip_freeze.txt`'de ve dosyada yorum olarak.
-- [x] Final eğitim ve değerlendirme komutları tek blok halinde README'ye yazılır.
-- [x] Temiz bir klonda değerlendirme komutunun çalıştığı doğrulanır. (2026-11-17: iç test birebir yeniden üretildi; dış test görüntü gerektirdiği için klonda çalıştırılmadı.)
-
-## A5. Belgeleme
-- [x] `README.md`: problem, veri, yöntem, sonuç tablosu, sınırlamalar.
-- [x] **Sınırlamalar bölümünü kullanıcı kendisi yazar.** Ajan sadece taslak madde listesi verir:
-  - Test seti geliştirme sırasında görüldü (K1).
-  - Dış test erken kullanıldı (O1).
-  - Değişiklikler ablation'sız yapıldı (O7).
-  - Hasta kimliği yok (D1).
-  - Değişkenlik sadece 2 seed ile ölçüldü.
-- [x] `EXPERIMENTS.md`: deney geçmişi, denetimin 5. bölümü temel alınır.
-- [x] Eskimiş belgeler temizlenir (`src/README.md`, README'deki "en iyi sonuç"). `git status` temiz olmalı.
-
-**✅ A aşaması bitti sayılır:** final_v1 dondurulmuş ve ölçülmüş, ağırlıklar iki yerde, README güncel.
-
----
-
-# AŞAMA B: Arayüz (v1 modeliyle)
-
-> v2'yi beklemeden yapılır. Model ileride değiştirilebilecek şekilde kurulur.
-> **Süre sınırı: en fazla 3 oturum.** Bitmeyen kısım (B3 dahil) v2 sonrasına bırakılır. Grad-CAM tek model (seed 42) üzerinde gösterilir ve ekranda belirtilir.
-
-## B1. Model paketleme
-- [x] (2026-11-17, `src/inference/package_model.py` → `models/final_v1/`: `seed42.pt`, `seed2.pt`, `config.json`; `verify_package.py` val'de kayıtlı olasılıklarla birebir aynı) Model klasörü: `weights.pt` ve `config.json`. Config şunları içerir: mimari adı, görüntü boyutu, sınıf listesi, T, melanom eşiği, sürüm, Grad-CAM hedef katmanı.
-- [x] Hugging Face Hub'a sürüm etiketiyle yüklenir (`v1`).
-- [x] Ön işleme (Gray-World ve normalizasyon) `src/` içindeki koddan doğrudan import edilir, kopyalanmaz.
-
-## B2. Gradio uygulaması (Hugging Face Spaces)
-- [x] Görüntü yükleme ve HAM10000'den birkaç örnek görüntü. (`app.py`, yerelde çalışıyor, 2026-11-17)
-- [x] En olası 3 sınıf ve olasılıkları.
-- [x] Grad-CAM ısı haritası. (`Predictor.gradcam`, 2026-11-17; arayüze bağlanması B2b'de.)
-- [x] Normal / tarama modu seçimi.
-- [x] (τ = 0.85, `choose_uncertainty_threshold.py`, val) "Emin değilim" kuralı: en yüksek olasılık eşiğin altındaysa tahmin yerine "doktor incelemesi önerilir" uyarısı. Eşik val'de belirlenir.
-- [x] Sabit uyarılar: "Araştırma amaçlıdır, tanı aracı değildir. Gerçek hasta görüntüsü yüklemeyin."
-- [x] Ekranda model sürümü ve test metrikleri gösterilir.
-
-## B3. (İsteğe bağlı) Giriş kontrolü
-- [ ] "Dermoskopi görüntüsü mü?" ön filtresi. Basit bir yöntemle başlanır (OOD skoru veya küçük bir ikili sınıflandırıcı).
-
-> **2026-11-17 durumu:** Gradio Space ücretsiz CPU'da PRO istiyor (HTTP 402). Kullanıcı ücret ödemek istemiyor: kalıcı ve ücretsiz seçenek v2'den sonra araştırılacak; olmazsa sunum günü `SHARE=1` geçici linki. B bu haliyle kapatıldı.
-
-**✅ B aşaması bitti sayılır:** Spaces linki çalışıyor, README'de demo linki ve ekran görüntüsü var.
+## A-kalan (kontrol et, eksikse kapat)
+- [x] `requirements.txt` sürümleri sabitlendi mi? (Evet, 2026-11-18: Mac sürümleri; Kaggle ortamı yorumda ve `baselines/cv5_baseline/pip_freeze.txt`.)
+- [x] Temiz klonda değerlendirme komutu çalıştı mı? (Evet, 2026-11-17: iç test birebir yeniden üretildi.)
+- [x] Sınırlamalar bölümü kullanıcının metniyle README'de mi? (Evet, 8 madde; v2 notu eklendi.)
+- [ ] `git status` temiz mi, `v1.0` etiketi var mı? (Temiz. Etiket `v1` adıyla var, `092bcf4`; HF modeli de `v1`. `v1.0` adı: kullanıcı kararı.)
 
 ---
 
 # AŞAMA C: v2 (geliştirme)
 
-> v1 ve arayüz bittikten sonra başlar. Her adımın başarı kriteri önceden yazılır.
 > **Durma kuralı:** Bir adım kriteri sağlamazsa sonuç kaydedilir ve sonraki adıma geçilir, aynı adım tekrar tekrar denenmez.
-> **v1 her zaman kıyas noktasıdır.** v2, v1'i gürültüden büyük farkla geçmezse arayüzdeki model değişmez.
->
-> **Bitiş kuralı (hangisi önce gelirse C biter):**
-> - **Hedef tuttu:** OOF tahminlerinde macro F1 ve BA ikisi de baseline + 0.02. Baseline ölçülünce hedef mutlak sayıya çevrilip kilitlenir.
-> - **Bütçe bitti:** baseline CV (C0) dışında en fazla 3 deney (C2, C3 ve bir serbest hak).
-> - **Koruma şartı:** melanom recall baseline'ın altına düşmeyecek.
->
-> **Kabul kriteri (her deney için, önceden yazılır):** 5 fold'un en az 4'ünde daha iyi **ve** ortalama fark > 0.01. Fold std'sinin 2 katı ayrıca raporlanır, bilgi amaçlı.
-> **CV'de en iyi epoch seçilmez, son epoch alınır** (fold içinde seçim OOF skorunu şişirir).
+> **v1 her zaman kıyas noktasıdır.** v2, v1'i gürültü eşiğinden büyük farkla geçmezse uygulamadaki model v1 olarak kalır.
 
-## C0. Ölçüm altyapısı: 5-fold CV (önce bu)
-**Neden:** 992 görüntülük val seti 0.01–0.02'lik farkları ayırt edemiyor. CV ile değerlendirme ~9.000 görüntüye dayanır.
-- [x] Train+val birleştirilir. **İç test setine dokunulmaz.**
-- [x] `StratifiedGroupKFold` (grup = `lesion_id`, katman = `label`) ile 5 fold oluşturulur ve `splits/cv5_v1.csv` olarak kaydedilir. (2026-11-17, MD5 `e8e35f94bd974356390d3f2aba045587`)
-- [x] v1 tarifi 5 fold'da eğitilir (Kaggle'da ~5 saat). Her fold'un OOF (out-of-fold) tahminleri kaydedilir.
-- [x] Çıktılar:
-  - CV ortalaması ± standart sapma (F1, BA, melanom recall).
-  - **Gürültü eşiği** = 2 × fold standart sapması. Bundan sonraki her deney bu eşikle değerlendirilir.
-- [x] Yan ürün: 5 fold modelinin ortalaması bir ensemble olur ("v1-CV ensemble"). (C4'te kuruldu ve final_v2 oldu; testte v1'i geçmedi.)
+## C0. 5-fold CV ✅
+Bitti. Gürültü eşiği ve OOF tahminleri (9.029 görüntü) mevcut.
 
-> **C0 sonucu (2026-11-18):** baseline OOF F1 0.785 / BA 0.779 / melR 0.662; hedef F1 ≥ 0.8048, BA ≥ 0.7993 kilitli (`baselines/cv5_baseline/`).
+## C1. Temiz dış test seti
+- [x] Durumu kontrol et. Yapılmadıysa: v2 karşılaştırması ISIC 2018 test setinde yapılır ve raporda "üçüncü kullanım" olarak belirtilir. (Atlandı 2026-11-18; C5'te üçüncü kullanım olarak ölçüldü, README sınırlama 2'de.)
 
-## C1. Yeni, temiz dış test seti
-> **ATLANDI (2026-11-18, kullanıcı kararı).** Gerekçe: dış teste bakarak karar verilmiyor; yeni set kurmanın maliyeti
-> (lisans, örtüşme kontrolü, eksik sınıflar) kazancından büyük. Şartlar: ISIC 2018 dış testi yalnızca C5'te, v2 tarifi
-> dondurulup commit'lendikten sonra **bir kez** ölçülür ve "üçüncü bakış" diye raporlanır; bu sete bakarak hiçbir şey
-> değiştirilmez; README sınırlamalarına eklenir. Aşağıdaki maddeler uygulanmayacak.
-**Neden:** ISIC 2018 test seti v2 sonunda üçüncü kez kullanılmış olacak.
-- [ ] Aday araştırılır, örneğin Derm7pt (dermoskopi, ~1000 vaka). Erişim ve lisans doğrulanır.
-- [ ] HAM10000 ve ISIC ile örtüşme kontrolü yapılır (ID ve görüntü hash'i).
-- [ ] Sınıf eşleştirme tablosu yazılır. Eşleşmeyen sınıflar dışarıda bırakılır ve bu raporlanır.
-- [ ] Set **en sona** saklanır. Hiçbir karar bu sete bakılarak verilmez.
+## C2. Ek veri (ISIC 2019)
+- [x] Durumu kontrol et ve sonucu `EXPERIMENTS.md`'ye işle. (Reddedildi: fold 0'da F1 0.766 / BA 0.730, eşik 0.796 / 0.769; kalan fold'lar koşulmadı. `EXPERIMENTS.md` [C2], `baselines/c2_isic2019_pilot/`.)
 
-## C2. Ek veri, doğru şekilde (ISIC 2019, HAM dışı kısmı)
-**Önceki denemenin sorunları:** Sınıf ağırlıkları melanomu ezdi, etiket eşleştirmesi kaydı, değerlendirme sadece iç testte yapıldı.
-- [x] Ek veri sadece train fold'larına eklenir, validation fold'ları saf HAM kalır (`--extra-train-source`, branch'te).
-- [x] Tekrar kontrolü: HAM ile örtüşen görüntüler ID ve hash ile çıkarılır (dHash, Hamming ≤ 12).
-- [x] Etiket eşleştirmesi önceden yazıldı: SCC ve UNK çıkarılır, AK → akiec.
-- [x] Sınıf ağırlığı önceden seçildi (2026-11-18): **baseline kuralı (ters frekans) korunur**; karekök ve üst sınır reddedildi, gerekçe `EXPERIMENTS.md` [C2].
-- [ ] ~~Alan kayması ölçümü (BCN20000 dış validation)~~: yapılmayacak (kullanıcı kararı: minimum GPU/zaman). Değerlendirme yalnızca HAM OOF.
-- [x] **Başarı kriteri ve pilot kuralı önceden yazıldı** (`EXPERIMENTS.md` [C2]): önce yalnızca fold 0; F1 ve BA'da +0.02 ve melanom recall düşmüyorsa kalan fold'lar, değilse deney biter.
-- [x] **Sonuç (2026-11-19): REDDEDİLDİ.** Fold 0: F1 0.766 (eşik 0.796), BA 0.730 (eşik 0.769), melanom recall 0.624. Kalan fold'lar koşulmadı, kod main'e girmedi. Ayrıntı `EXPERIMENTS.md` [C2], `baselines/c2_isic2019_pilot/`.
+## C3. Daha güçlü ön eğitim ❌ Atlandı
+**Gerekçe:** Beklenen kazanç düşük (literatürde dermatolojiye özel modeller iyi fine-tune edilmiş modellerle "karşılaştırılabilir" düzeyde), ön eğitim verisinde HAM/ISIC sızıntısı doğrulanamıyor, maliyet yüksek. ImageNet-22k yeterli kabul edildi. README → "Gelecek çalışmalar"a yazılır.
 
-## C3. Daha güçlü ön eğitim (tek aday) - ATLANDI (kullanıcı kararı, 2026-11-19)
-> Belgeler okundu, eğitim yapılmadı. PanDerm: ön eğitimde HAM/ISIC 2018-2019 adıyla yok, ama Avustralya klinik arşivleri
-> (HAM'in Queensland kaynağıyla örtüşme) belgelerden dışlanamıyor; lisans CC-BY-NC-ND (fine-tune edilmiş modeli yayımlamak
-> sorunlu). DINOv2: tıbbi kaynak yok, risk ImageNet-22k ile aynı türde; ama alana özel değil ve T4'te birkaç kat yavaş.
-> Kullanıcı minimum GPU/zaman için adımı atladı. Serbest deney hakkı da kullanılmadı. Ayrıntı `EXPERIMENTS.md` [C3].
-- [ ] Tek aday seçilir: DINOv2 ViT-S/B veya PanDerm-Base. Model T4'e sığmalı.
-- [ ] **Sızıntı kontrolü:** Ön eğitim verisinde HAM/ISIC görüntüsü olup olmadığı belgelerden araştırılır. Doğrulanamazsa bu adım atlanır ve nedeni yazılır.
-- [ ] Aynı CV ile eğitilir.
-- [ ] **Başarı kriteri (önceden):** CV F1, v1-CV'yi gürültü eşiğinden büyük farkla geçmeli.
-
-## C4. Final v2 tarifi (sadece CV/OOF verisiyle)
-- [x] C2 ve C3'ten kazananlar birleştirilir. Kazanan yoksa v1 tarifi kalır. (Kazanan yok: tarif v1; v2 = baseline CV'nin 5 fold modeli.)
-- [x] Fold ensemble, T kalibrasyonu ve melanom tarama eşiği OOF tahminleri üzerinde belirlenir (Mac'te yeniden hesaplanan OOF; t = 0.07, τ = 0.90).
-- [x] `baselines/final_v2/README.md` yazılır ve **test ölçümünden önce** commit edilir (`2e800d9` kurallar, `d0c13f2` tarif).
+## C4. Final v2 tarifi: fold ensemble (seçenek B)
+- [x] C0'daki 5 fold modelinin ağırlıkları indirilir (Kaggle notebook Version 11 ve 12 çıktısı). MD5'ler kaydedilir. (CLI sürüm numarasını yok saydığı için Kaggle SDK ile indirildi; `models/cv5_baseline/`, MD5'ler `recipe.json`'da.)
+- [x] T kalibrasyonu ve melanom tarama eşiği OOF tahminleri üzerinde seçilir. (OOF Mac'te yeniden hesaplandı; T 0.93-0.96, t = 0.07, τ = 0.90.)
+- [x] **Bilinen sınırlama:** OOF'ta her görüntüyü tek model tahmin etti, ama T ve eşik 5 modelin ortalamasına uygulanacak. README'ye yazılır. (`baselines/final_v2/README.md`)
+- [x] `baselines/final_v2/README.md` **test ölçümünden önce** commit edilir (`2e800d9`, tarif `d0c13f2`). Not: gerçekte commit edilen kural bu satırdakinden daha gevşekti ("iç ve dış testte F1 ve BA'nın dördü de v1'den düşük değil", kullanıcıyla kararlaştırıldı); o da tutmadı, yani iki kurala göre de sonuç aynı: v1 kalır.
+- [x] Ağırlıklar alınamazsa v2 = final_v1 olur ve bu raporlanır. (Gerekmedi, ağırlıklar alındı.)
 
 ## C5. Tek ölçüm ve karşılaştırma
-- [x] İç testte bir kez ("geliştirme sırasında görülmüş set" notuyla): F1 0.826, BA 0.817 (v1 0.829 / 0.832).
-- [x] ~~C1'deki yeni dış test setinde~~ ISIC 2018 dış testinde bir kez ("üçüncü bakış"; C1 atlandı): F1 0.813, BA 0.794 (v1 0.795 / 0.796).
-- [x] v1'in aynı setteki sonucu zaten var (F1 0.795 / BA 0.796, ikinci bakış); v2 ile aynı sette karşılaştırılır.
-- [x] v2, v1'i geçiyorsa arayüzdeki model `config.json` değiştirilerek güncellenir (HF Hub'da `v2` etiketi). Geçmiyorsa v1 kalır ve bu da bir sonuç olarak raporlanır. **Sonuç (2026-11-19): v1 kalır** (önceden yazılan kuralın 4 koşulundan 1'i tuttu; farklar güven aralığı içinde). `baselines/final_v2/README.md`.
+- [x] İç testte bir kez ("geliştirme sırasında görülmüş set" notuyla). (F1 0.826, BA 0.817)
+- [x] Dış testte bir kez (C1 varsa yeni set, yoksa ISIC 2018 "üçüncü kullanım" notuyla). (F1 0.813, BA 0.794)
+- [x] v1 ile aynı setlerde karşılaştırma tablosu, güven aralıklarıyla. (`baselines/final_v2/README.md`, `comparison_v1.json`)
+- [x] Sınıf bazında iç test / dış test karşılaştırma tablosu (dış testteki düşüşün hangi sınıflarda yoğunlaştığını göstermek için). (`baselines/final_v1/README.md` sonu: en büyük düşüş akiec −0.12.)
+- [ ] Karar: uygulamada hangi model kullanılacak (v1 / v2). `v2.0` etiketi. (Karar verildi: v1. Etiket bekliyor: kullanıcı kararı.)
+
+**✅ C aşaması bitti sayılır:** Final model kesinleşti, sayılar artık değişmiyor.
+
+### C sonucu (2026-11-19)
+- v2 (5 fold ensemble) önceden yazılmış kuralın 4 koşulundan yalnızca 1'ini sağladı (dış test F1 0.813 vs 0.795). Bütün farklar güven aralığı (±0.04) içinde.
+- **Karar: uygulamada ve raporda final model v1.** v2 "denendi, ölçülebilir kazanç yok" olarak raporlanır.
+- Tarama modunda v2'nin melanom recall'u daha yüksek, precision'ı daha düşük; sebebi eşiğin tek model OOF'ta seçilip ensemble ortalamasına uygulanması (önceden yazılmış sınırlama).
+- Dış test (ISIC 2018) üçüncü kez görüldü; raporda belirtilir.
+- Ayrıntılar: `baselines/final_v2/`, `EXPERIMENTS.md`.
 
 ---
 
-# AŞAMA D: Sohbet paneli ve RAG (isteğe bağlı)
+# AŞAMA W: Web uygulaması (analiz ekranı + asistan)
 
-> Sadece v2 bittikten sonra ve vakit kalırsa. Önceki aşamaları geciktirmez.
+> Kendi web sitesi: FastAPI backend + web frontend. Analiz ekranı ve asistan sohbeti aynı uygulamada.
+> **Temel ilke:** Teşhis/sınıflandırmayı her zaman CNN yapar. LLM sadece açıklar, teşhis koymaz.
+> **Kod yazmadan önce tasarım onaylanır (W0).**
 
-- [ ] Arayüze "Asistana sor" paneli eklenir.
-- [ ] LLM'e **görüntü gönderilmez, sadece CNN'in yapılandırılmış çıktısı** gönderilir: sınıflar, olasılıklar, mod.
-- [ ] Bilgi tabanı: açık erişimli dermoskopi ve klinik kılavuz kaynakları. Lisansları kontrol edilir.
-- [ ] Kurallar:
-  - LLM sayıları değiştirmez ve kendi teşhisini koymaz.
-  - Her iddia için kaynak gösterir.
-  - Kaynakta olmayan bir şey sorulursa "kaynağım yok" der.
-- [ ] Değerlendirme: küçük bir soru seti hazırlanır, cevapların kaynaklara sadakati (faithfulness) ölçülür. Örneğin RAGAS ile.
+## W0. Tasarım (kod yok)
+- [ ] **İlham panosu:** 2–3 referans ekran, her biri için "neyi alıyoruz / neyi almıyoruz" cümlesi. Görüntüler `docs/design/refs/` (gitignore'da).
+- [ ] **Yerleşim kararı (referans: üç sütunlu analitik ekran):**
+  - Sol: örnek vakalar / son analizler (gerçek hasta listesi yok).
+  - Orta: lezyon görüntüsü + Grad-CAM, en olası 3 sınıf, metrik kartları (risk seviyesi, en olası sınıf, mod).
+  - Sağ: asistan paneli, öneri butonlarıyla.
+- [ ] **Asistanın rolü (karar verildi):** Sonuç yorumlama asistanı. Modelin çıktısını açıklar, Grad-CAM'i yorumlar, kaynaklı dermoskopi kriterleri verir, rapor taslağı üretir. **Teşhis koymaz.** İş akışı işleri (hasta kaydı, not, hatırlatma, hasta listesi) **kapsam dışı**, veritabanında hasta verisi tutulmaz.
+- [ ] **Ekran akışı (karar verildi):**
+  1. Doktor görüntüyü yükler → CNN sonucu üretir → kartlar, olasılıklar ve Grad-CAM anında dolar.
+  2. Asistan panelinde **şablonla üretilmiş** özet mesajı çıkar (LLM değil; sayılar doğrudan CNN çıktısından yerleştirilir).
+  3. Altında öneri butonları: "Tarama modunda göster", "Grad-CAM'i aç/kapat", "Rapor taslağı oluştur", "Model ne kadar başarılı?" (W6'da ek olarak "Ayrıntılı açıklama iste").
+  4. LLM sadece doktor soru sorduğunda veya "Ayrıntılı açıklama iste"ye bastığında çalışır.
+- [ ] **Mockup** onaylanır. (Taslak: Design kanvası, "Taslak 2 · analiz + asistan".)
+- [ ] **Tasarım kuralları:** renk paleti, yazı tipi, boşluklar, köşe yuvarlaklığı.
+- [ ] **Bileşen listesi:** yükleme alanı, risk kartı, olasılık çubukları, Grad-CAM görüntüleyici (yoğunluk ayarlı), mod seçici, asistan paneli, öneri butonları.
+- [ ] **Durumlar:** boş, yükleniyor, hata, "emin değilim", "dermoskopi görüntüsü değil".
+- [ ] **Uydurma tek bir skor yok:** sadece modelin gerçek çıktıları (olasılıklar, risk seviyesi) gösterilir.
+- [ ] Birebir kopya yok: yerleşim ve fikirler alınır, renkler/ikonlar/görseller kendimize ait.
+
+## W1. API sözleşmesi
+- [ ] `POST /predict` girdisi (görüntü + mod) ve çıktısı (`analysis_id`, sınıflar, olasılıklar, risk, emin değilim bayrağı, Grad-CAM, model sürümü, şablon özet metni) JSON şeması olarak `docs/api.md`'ye yazılır.
+- [ ] `POST /chat` (W6 için, şimdiden tanımlanır): girdi `{analysis_id, mesaj, geçmiş}`, çıktı `{cevap, kaynaklar, eylem}`. `eylem` örnekleri: `set_mode`, `toggle_gradcam`, `generate_report`.
+- [ ] Frontend ve backend bu sözleşmeye göre bağımsız geliştirilir.
+
+## W2. Model paketleme
+- [ ] Model klasörü: final_v1 ağırlıkları + `config.json` (mimari, görüntü boyutu, sınıf listesi, T, melanom eşiği, sürüm, Grad-CAM hedef katmanı).
+- [ ] Hugging Face Hub'a `v1` etiketiyle yüklenir.
+- [ ] Ön işleme (Gray-World, normalizasyon) `src/` içinden import edilir, kopyalanmaz.
+- [ ] Model değiştirmek sadece config/ağırlık değişikliği olmalı, kod değişikliği değil.
+
+## W3. Backend (FastAPI)
+- [ ] `/predict` uç noktası, sözleşmeye uygun.
+- [ ] Grad-CAM (ensemble ise: tek model mi, ortalama mı, kararı yazılır).
+- [ ] "Emin değilim" kuralı: en yüksek olasılık eşiğin altındaysa uyarı. Eşik val/OOF'ta belirlenir.
+- [ ] Şablon özet metni backend'de üretilir (sabit cümle + CNN sayıları).
+- [ ] Analiz sonuçları `analysis_id` ile **bellekte** kısa süre tutulur (ör. 30 dk), sonra silinir. Veritabanı yok.
+- [ ] Rapor taslağı uç noktası (PDF): mevcut analizden üretilir, hiçbir şey kaydedilmez.
+- [ ] Gizlilik: görüntüler **diske kaydedilmez**, işlenip bellekten silinir; EXIF temizlenir; HTTPS.
+- [ ] Basit güvenlik: dosya boyutu/türü kontrolü, CORS sadece kendi frontend adresine açık, istek sınırı (rate limit).
+- [ ] Tahmin süresi ölçülür (ensemble CPU'da yavaşsa raporlanır).
+
+## W4. Frontend
+- [ ] Teknoloji: [React / Next.js — kullanıcı onaylar].
+- [ ] W0'daki mockup ve tasarım kurallarına göre.
+- [ ] Sabit uyarılar: "Araştırma amaçlıdır, tanı aracı değildir. Gerçek hasta görüntüsü yüklemeyin."
+- [ ] Model sürümü ve test metrikleri "Model hakkında" bölümünde.
+- [ ] Telefon genişliğinde de kullanılabilir (sütunlar alt alta).
+- [ ] **Yerleşim (mockup'a göre):** sol sütun örnek vakalar + oturum bilgisi; orta sütun analiz başlığı, görüntü + Grad-CAM, en olası 3 sınıf paneli, metrik kartları (risk seviyesi, melanom olasılığı + eşik çizgisi, modelin kararlılığı); sağ sütun asistan paneli + model performans tablosu.
+- [ ] **Asistan v1 (LLM'siz):** şablon özet mesajı + öneri butonları. Butonlar sabit cevaplar ve sabit eylemler (mod değiştir, Grad-CAM aç/kapat, rapor taslağı) tetikler. Serbest metin kutusu yok.
+
+## W5. Canlıya alma
+- [ ] **Backend:** PyTorch + birden fazla model RAM ister. Ücretsiz seçenek: Hugging Face Spaces (Docker + FastAPI). Düşük RAM'li ücretsiz planlar (örn. 512 MB) yetmeyebilir; seçimden önce bellek kullanımı ölçülür.
+- [ ] **Frontend:** Vercel veya Netlify.
+- [ ] Ortam değişkenleri (API adresi, varsa anahtarlar) repoya girmez.
+- [ ] README'ye canlı demo linki ve ekran görüntüleri eklenir. `web-v1` etiketi.
+
+**✅ W (v1) bitti sayılır:** Canlı link çalışıyor, analiz ekranı + LLM'siz asistan hazır.
+
+## W6. Asistan v2: LLM + RAG (isteğe bağlı)
+- [ ] Akış: frontend → `POST /chat {analysis_id, mesaj, geçmiş}` → backend sonuçları bellekten alır → RAG ile 3–5 ilgili paragraf bulunur → LLM'e kurallar + sonuçlar + paragraflar + soru gönderilir → cevap kaynaklarıyla döner.
+- [ ] Ekranı değiştiren istekler LLM araçlarıyla (tool calling) yapılır: `set_mode`, `toggle_gradcam`, `generate_report`.
+- [ ] "Ayrıntılı açıklama iste" butonu eklenir (otomatik değil, tek tıkla).
+- [ ] LLM'e **görüntü gönderilmez**, sadece CNN'in yapılandırılmış çıktısı gönderilir.
+- [ ] Kartlardaki sayılar her zaman CNN'den gelir; LLM'in cevabındaki sayılar backend'in verdiği sayılarla aynı olmalı.
+- [ ] LLM API anahtarı sadece backend'de durur, frontend'e asla gitmez.
+- [ ] Bilgi tabanı: açık erişimli dermoskopi ve klinik kılavuz kaynakları, lisansları kontrol edilir.
+- [ ] Kurallar: sayıları değiştirmez, kendi teşhisini koymaz, her iddia için kaynak gösterir, kaynakta yoksa "kaynağım yok" der.
+- [ ] Değerlendirme: küçük bir soru seti, cevapların kaynaklara sadakati ölçülür (örn. RAGAS).
+- [ ] Serbest metin kutusu bu aşamada açılır.
 
 ---
 
-## v1 bitene kadar YAPILMAYACAKLAR
-Yeni eğitim koşuları, yeni mimariler, ek veri, CV, TTA, metadata füzyonu, mixup/CutMix, logit adjustment, daha yüksek çözünürlük, daha büyük modeller.
+# AŞAMA R: Rapor (en son iş)
+
+> Model sayıları C5'ten beri sabit. Rapor en sona bırakıldı, böylece web uygulaması (canlı demo linki, ekran görüntüleri, Grad-CAM örnekleri) da rapora girer.
+
+- [ ] Ayrı rapor promptu kullanılır (outline önce, her sayının yanında kaynak dosya, yeni ölçüm yok).
+- [ ] İçerik: problem, veri, yöntem, deney süreci, v1 / v2 sonuçları, dış test analizi, web uygulaması (mimari, ekranlar, gizlilik kararları), sınırlamalar, gelecek çalışmalar.
+- [ ] Yeni eğitim gerektirmeyen ek analizler (isteğe bağlı, `IDEAS.md`'den en fazla 2–3 tane): yanlış tahmin galerisi, Grad-CAM örnekleri, kalibrasyon diyagramı, ConvNeXt-Small eğitim eğrileri karşılaştırması.
+
+**✅ R aşaması bitti sayılır:** Rapor teslim formatında hazır. Proje biter.
+
+---
+
+## Proje sonunda gözden geçirilecek
+Bu sürümdeki web ve asistan kararları başlangıç tasarımıdır. Proje sonunda kullanıcı beğenmediği parçaları çıkarabilir veya yeni parçalar ekleyebilir; değişiklikler bu dosyaya işlenir.
+
+---
 
 ## Kalıcı olarak YAPILMAYACAKLAR (kanıt aleyhte)
-TTA, metadata füzyonu, test çözünürlüğünü artırmak, ConvNeXt-Small ve üstü (8 bin görüntüde kazanç yok), under/oversampling.
+TTA, metadata füzyonu, test çözünürlüğünü artırmak, ConvNeXt-Small ve üstü (8 bin görüntüde kazanç yok), under/oversampling, augmentation v2, dermatolojiye özel / web ölçekli ön eğitim (C3 gerekçesi).
 
 ---
 

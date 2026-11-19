@@ -113,3 +113,24 @@ Sınıf bazında recall (normal): akiec 0.67, bcc 0.83, bkl 0.81, df 0.73, mel 0
   oynama, eşiğin tek bir sette yargılanamayacağını gösteriyor.
 - **Ortalama, iki tek modelden de iyi** (F1 0.795'e karşı 0.787 / 0.780); iç testteki tabloyla tutarlı.
 - Yarışmanın ek verisiz en iyisi BA 0.845 (repodaki notlara göre): fark yaklaşık 5 puan.
+
+## Sınıf bazında iç test / dış test (normal mod, 2026-11-19, ROADMAP C5)
+
+Yeni ölçüm yok; mevcut `test_metrics_normal.json` dosyalarından. n = görüntü sayısı.
+
+| Sınıf | İç n | İç recall | İç F1 | Dış n | Dış recall | Dış F1 | F1 farkı (dış − iç) |
+|---|---|---|---|---|---|---|---|
+| akiec | 30 | 0.70 | 0.79 | 43 | 0.67 | 0.67 | **−0.12** |
+| bcc | 48 | 0.92 | 0.87 | 93 | 0.83 | 0.81 | −0.06 |
+| bkl | 110 | 0.79 | 0.77 | 217 | 0.81 | 0.81 | +0.03 |
+| df | 14 | 0.86 | 0.83 | 44 | 0.73 | 0.76 | −0.07 |
+| mel | 107 | 0.72 | 0.64 | 171 | 0.74 | 0.68 | +0.04 |
+| nv | 664 | 0.92 | 0.94 | 909 | 0.91 | 0.92 | −0.01 |
+| vasc | 13 | 0.92 | 0.96 | 35 | 0.89 | 0.90 | −0.06 |
+
+- Dış testteki düşüş (macro F1 0.829 → 0.795) en çok **akiec**'te (−0.12), sonra df, bcc ve vasc'ta. Bunlar az örnekli
+  sınıflar; macro F1 her sınıfa eşit ağırlık verdiği için küçük sınıflardaki düşüş ortalamayı çok etkiliyor.
+- mel ve bkl dış testte düşmüyor, hatta biraz yükseliyor; nv sabit.
+- Dikkat: iç testte df 14, vasc 13 görüntü. Tek bir görüntü recall'ı ~7 puan oynatır; bu satırlar çok gürültülü.
+- final_v2 için aynı tablo benzer (akiec −0.15 en büyük düşüş); `baselines/final_v2/` JSON'larında.
+
