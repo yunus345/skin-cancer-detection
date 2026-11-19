@@ -69,7 +69,7 @@ Ayrıntılı adımlar ROADMAP sürüm 1'deydi (A0–A5). final_v1 dondurulmuş v
 - [x] `requirements.txt` sürümleri sabitlendi mi? (Evet, 2026-11-18: Mac sürümleri; Kaggle ortamı yorumda ve `baselines/cv5_baseline/pip_freeze.txt`.)
 - [x] Temiz klonda değerlendirme komutu çalıştı mı? (Evet, 2026-11-17: iç test birebir yeniden üretildi.)
 - [x] Sınırlamalar bölümü kullanıcının metniyle README'de mi? (Evet, 8 madde; v2 notu eklendi.)
-- [ ] `git status` temiz mi, `v1.0` etiketi var mı? (Temiz. Etiket `v1` adıyla var, `092bcf4`; HF modeli de `v1`. `v1.0` adı: kullanıcı kararı.)
+- [x] `git status` temiz mi, `v1.0` etiketi var mı? (Temiz. Etiket `v1` adıyla kalır (kullanıcı kararı, 2026-11-19), `092bcf4`; HF modeli de `v1`.)
 
 ---
 
@@ -102,7 +102,7 @@ Bitti. Gürültü eşiği ve OOF tahminleri (9.029 görüntü) mevcut.
 - [x] Dış testte bir kez (C1 varsa yeni set, yoksa ISIC 2018 "üçüncü kullanım" notuyla). (F1 0.813, BA 0.794)
 - [x] v1 ile aynı setlerde karşılaştırma tablosu, güven aralıklarıyla. (`baselines/final_v2/README.md`, `comparison_v1.json`)
 - [x] Sınıf bazında iç test / dış test karşılaştırma tablosu (dış testteki düşüşün hangi sınıflarda yoğunlaştığını göstermek için). (`baselines/final_v1/README.md` sonu: en büyük düşüş akiec −0.12.)
-- [ ] Karar: uygulamada hangi model kullanılacak (v1 / v2). `v2.0` etiketi. (Karar verildi: v1. Etiket bekliyor: kullanıcı kararı.)
+- [x] Karar: uygulamada hangi model kullanılacak (v1 / v2). `v2.0` etiketi. (Karar: v1. `v2.0` etiketi `c9eee16`'da: "v2 denendi, burada bitti".)
 
 **✅ C aşaması bitti sayılır:** Final model kesinleşti, sayılar artık değişmiyor.
 
@@ -172,7 +172,13 @@ Bitti. Gürültü eşiği ve OOF tahminleri (9.029 görüntü) mevcut.
 - [ ] **Asistan v1 (LLM'siz):** şablon özet mesajı + öneri butonları. Butonlar sabit cevaplar ve sabit eylemler (mod değiştir, Grad-CAM aç/kapat, rapor taslağı) tetikler. Serbest metin kutusu yok.
 
 ## W5. Canlıya alma
-- [ ] **Backend:** PyTorch + birden fazla model RAM ister. Ücretsiz seçenek: Hugging Face Spaces (Docker + FastAPI). Düşük RAM'li ücretsiz planlar (örn. 512 MB) yetmeyebilir; seçimden önce bellek kullanımı ölçülür.
+- [ ] **İlk iş: barındırma seçeneklerini güncel olarak kontrol et.** Temmuz 2026'dan beri kullanıcı raporlarına göre Hugging Face'te Gradio ve Docker Space'ler ücretsiz CPU'da PRO istiyor (17 Kasım'da Gradio Space HTTP 402 verdi). Sadece statik Space'ler ücretsiz.
+- [ ] **Backend seçenekleri** (karar kullanıcıda):
+  - HF PRO (ücretli, en kolay).
+  - Başka bir servis (Render, Google Cloud Run vb.): ücretsiz planın RAM sınırı, uyku/soğuk başlatma ve kart şartı kontrol edilir.
+  - Modeli ONNX'e çevirip ONNX Runtime ile çalıştırmak: PyTorch'a göre daha az RAM, küçük ücretsiz planlara sığabilir. Çıktıların PyTorch ile aynı olduğu (tolerans içinde) doğrulanır.
+  - Tarayıcıda ONNX (backend'siz): ücretsiz statik barındırma; ama Grad-CAM zorlaşır ve W6 için yine backend gerekir.
+- [ ] Seçimden önce backend'in bellek kullanımı ve tahmin süresi ölçülür.
 - [ ] **Frontend:** Vercel veya Netlify.
 - [ ] Ortam değişkenleri (API adresi, varsa anahtarlar) repoya girmez.
 - [ ] README'ye canlı demo linki ve ekran görüntüleri eklenir. `web-v1` etiketi.
