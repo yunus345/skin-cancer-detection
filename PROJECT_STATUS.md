@@ -83,5 +83,5 @@ A'dan kalanlar (B'yi bekletmez):
 
 ## Sıradaki tek adım
 
-**Kalıcı ücretsiz demo araştırması (sunumdan önce, kullanıcı kararıyla).** Seçenekler araştırılır, para ödenmez. Hiçbiri
-olmazsa sunum günü `SHARE=1 .venv/bin/python app.py`. Aşama D (sohbet paneli, RAG) isteğe bağlı.
+**ROADMAP sürüm 2 (2026-11-19): A → C → W (web uygulaması) → R (rapor).** A ve C bitti. Sıradaki: **W0 tasarım (kod yok)**:
+ilham panosu, yerleşim, mockup, tasarım kuralları. Açık küçük karar: etiket adları (`v1` var; `v1.0` / `v2.0` eklensin mi).
